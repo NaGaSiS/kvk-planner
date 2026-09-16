@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submit for {{ event.name }}</title>
+    <title>Player Form – {{ event.name }}</title>
+    <meta name="description" content="Player resource submission form for KvK event - {{ event.name }}">
     {% include 'analytics.html' %}
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
     <script>
         tailwind.config = {
@@ -13,414 +17,1256 @@
             theme: {
                 extend: {
                     colors: {
-                        'kvk-gold': '#FBBF24', // Amber-400
-                        'kvk-gray': {
-                            700: '#374151',
-                            800: '#1F2937',
-                            900: '#111827',
-                        },
-                    }
+                        'kvk-gold': '#FBBF24',
+                        'kvk-amber': '#F59E0B',
+                        'kvk-gray': { 700: '#374151', 800: '#1F2937', 900: '#111827' },
+                    },
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
                 }
             }
         }
     </script>
     <style>
+        body { font-family: 'Outfit', sans-serif; }
+
         .slot {
-            border: 1px solid #374151; /* kvk-gray-700 */
+            border: 1px solid #374151;
             position: relative;
             cursor: pointer;
             user-select: none;
-            transition: background-color 0.2s;
+            transition: all 0.15s ease;
             border-radius: 0.25rem;
         }
-        .slot:before {
-            content: "";
-            display: block;
-            padding-top: 100%;
-        }
-        .slot.selected {
-            background-color: #FBBF24; /* kvk-gold */
-            border-color: #FBBF24;
-        }
-        .slot.selected .slot-content {
-            color: #111827; /* kvk-gray-900 */
-        }
+        .slot:before { content: ""; display: block; padding-top: 100%; }
+        .slot.selected { background-color: #FBBF24; border-color: #FBBF24; }
+        .slot.selected .slot-content { color: #111827; }
         .slot-content {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            line-height: 1.1;
-            text-align: center;
-            overflow-wrap: anywhere;
-            padding: 2px;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; line-height: 1.1; text-align: center;
+            overflow-wrap: anywhere; padding: 2px;
         }
+        .slot:hover:not(.selected) { background-color: #374151; }
+
+        /* Player ID identification panel */
+        #player-info-panel {
+            transition: all 0.4s ease;
+        }
+
+        /* Image upload zones */
+        .upload-zone {
+            border: 2px dashed #374151;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #FBBF24;
+            background-color: rgba(251, 191, 36, 0.05);
+        }
+        .upload-zone.has-file {
+            border-color: #10B981;
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+
+        /* Success banner */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .success-banner { animation: slideDown 0.5s ease forwards; }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            border-top-color: #FBBF24;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Confidence badge */
+        .confidence-high { background-color: rgba(16, 185, 129, 0.2); color: #10B981; }
+        .confidence-mid { background-color: rgba(251, 191, 36, 0.2); color: #FBBF24; }
+        .confidence-low { background-color: rgba(239, 68, 68, 0.2); color: #EF4444; }
+
+        .gold-gradient { background: linear-gradient(90deg, #FBBF24, #F59E0B); }
     </style>
 </head>
 <body class="bg-kvk-gray-900 text-gray-200 antialiased">
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-kvk-gold">Submission Form</h1>
-            <p class="text-lg text-gray-400 mt-2">{{ event.name }}</p>
+
+        <!-- Success Banner -->
+        {% if show_success %}
+        <div class="success-banner mb-6 bg-green-900/30 border border-green-700/50 rounded-xl p-5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-green-400" data-i18n="success_sent_title">¡Datos enviados correctamente!</h3>
+                    <p class="text-green-300/70 text-sm" data-i18n="success_sent_msg">Tu participación ha sido registrada. Puedes actualizar tus datos volviendo a enviar el formulario.</p>
+                </div>
+            </div>
+            <a href="{{ url_for('locked_appointments', event_uid=event.uid) }}"
+               class="ml-4 flex-shrink-0 inline-flex items-center gap-2 bg-kvk-gold text-kvk-gray-900 font-bold px-5 py-2.5 rounded-xl hover:bg-kvk-amber transition text-sm">
+                <span data-i18n="btn_view_calendar">📅 Ver Calendario</span>
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="inline-flex items-center gap-2 bg-kvk-gold/10 border border-kvk-gold/20 rounded-full px-4 py-1">
+                    <span class="text-kvk-gold text-sm font-medium">⚔️ {{ event.name }}</span>
+                </div>
+                {% include 'lang_selector.html' %}
+            </div>
+            <div class="text-center">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-kvk-gold mb-2" data-i18n="page_title">Player Form</h1>
+                <p class="text-gray-400" data-i18n="page_subtitle">Enter your resources to participate in KvK appointment assignment</p>
+            </div>
         </header>
 
-        <form action="/event/{{ event.uid }}/submit" method="POST" {% if enable_screenshot_upload %}enctype="multipart/form-data"{% endif %} class="bg-kvk-gray-800 p-6 rounded-xl shadow-lg border border-kvk-gray-700">
+        <form id="main-form" action="/event/{{ event.uid }}/submit" method="POST" enctype="multipart/form-data"
+              class="space-y-6">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="p-4 border-b border-kvk-gray-700">
-                <h2 class="text-2xl font-bold text-gray-100 mb-4">Your Information</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                    <div>
-                        <label for="player_id" class="block text-sm font-medium text-gray-300 mb-1">Player ID (Numeric)</label>
-                        <input type="text" name="player_id" id="player_id" required 
-                               pattern="\d*" inputmode="numeric" placeholder="e.g. 12345678"
-                               class="block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md shadow-sm text-gray-200 focus:border-kvk-gold focus:ring focus:ring-kvk-gold focus:ring-opacity-50">
+            <input type="hidden" name="avatar_url" id="avatar_url_field" value="">
+
+            <!-- ===== PLAYER IDENTIFICATION SECTION ===== -->
+            <div class="bg-kvk-gray-800 rounded-2xl border border-kvk-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-kvk-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-1" data-i18n="section_identification">👤 Player Identification</h2>
+                    <p class="text-gray-400 text-sm" data-i18n="section_identification_sub">Enter your Player ID and Kingdom, then click Search</p>
+                </div>
+
+                <div class="p-6">
+                    <!-- Search row: ID + Kingdom + Search button -->
+                    <div class="flex flex-col sm:flex-row gap-3 items-end mb-5">
+
+                        <!-- Player ID -->
+                        <div class="flex-1 min-w-0">
+                            <label for="player_id" class="block text-sm font-semibold text-gray-300 mb-2">
+                                <span data-i18n="label_player_id">Player ID</span> <span class="text-red-400">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" name="player_id" id="player_id" required
+                                       pattern="\d*" inputmode="numeric"
+                                       data-i18n-placeholder="hint_player_id"
+                                       placeholder="e.g. 325963354"
+                                       value="{{ player_id_prefill }}"
+                                       class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all pr-10">
+                                <div id="id-spinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div id="id-check" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kingdom number -->
+                        <div class="w-full sm:w-36">
+                            <label for="kingdom_search" class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="label_kingdom">Kingdom</label>
+                            <input type="number" id="kingdom_search" min="1"
+                                   data-i18n-placeholder="hint_kingdom"
+                                   placeholder="e.g. 2072"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all">
+                        </div>
+
+                        <!-- Search button -->
+                        <div class="flex-shrink-0">
+                            <button type="button" id="search-btn"
+                                    onclick="triggerLookup()"
+                                    class="flex items-center gap-2 bg-kvk-gold hover:bg-kvk-amber text-gray-900 font-bold px-5 py-3 rounded-xl transition-all shadow-lg hover:shadow-kvk-gold/20">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <span data-i18n="btn_search">Search</span>
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label for="player_name" class="block text-sm font-medium text-gray-300 mb-1">Player Name</label>
-                        <input type="text" name="player_name" id="player_name" required placeholder="e.g. KingArthur"
-                               class="block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md shadow-sm text-gray-200 focus:border-kvk-gold focus:ring focus:ring-kvk-gold focus:ring-opacity-50">
+
+                    <!-- Player info panel (result area) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+                        <div id="player-info-panel" class="lg:col-span-4">
+
+                            <!-- Default state -->
+                            <div id="panel-empty" class="flex items-center gap-4 py-2">
+                                <div class="w-14 h-14 bg-kvk-gray-900 rounded-full flex items-center justify-center border-2 border-dashed border-kvk-gray-700 flex-shrink-0">
+                                    <svg class="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-sm font-medium" data-i18n="hint_id">Enter your ID and Kingdom, then click Search</p>
+                                    <p class="text-gray-600 text-xs mt-0.5" data-i18n="hint_id_sub">Previous data will be loaded automatically if found</p>
+                                </div>
+                            </div>
+
+                            <!-- Player found state -->
+                            <div id="panel-found" class="hidden">
+                                <div class="flex items-center gap-5 flex-wrap">
+                                    <div class="relative flex-shrink-0">
+                                        <img id="player-avatar" src="" alt="Avatar"
+                                             class="w-20 h-20 rounded-full border-4 border-kvk-gold object-cover hidden">
+                                        <div id="player-avatar-placeholder"
+                                             class="w-20 h-20 rounded-full border-4 border-kvk-gold/50 bg-kvk-gray-900 flex items-center justify-center">
+                                            <svg class="w-10 h-10 text-kvk-gold/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </div>
+                                        <div id="city-badge" class="absolute -bottom-1 -right-1 bg-kvk-gray-900 border border-kvk-gold/50 rounded-full px-2 py-0.5 text-xs font-bold text-kvk-gold hidden"></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <p id="player-found-name" class="text-xl font-bold text-white truncate"></p>
+                                            <span class="inline-flex items-center gap-1 bg-green-900/30 border border-green-700/50 text-green-400 text-xs px-2 py-0.5 rounded-full flex-shrink-0">
+                                                ✓ <span data-i18n="verified">Verified</span>
+                                            </span>
+                                        </div>
+                                        <p id="player-found-alliance" class="text-kvk-gold text-sm"></p>
+                                        <div class="flex items-center gap-4 mt-1 flex-wrap">
+                                            <p id="player-found-status" class="text-gray-400 text-xs"></p>
+                                            <p id="player-found-power" class="text-gray-400 text-xs hidden">
+                                                <span data-i18n="label_power">Power:</span> <span id="player-power-value" class="text-white font-medium"></span>
+                                            </p>
+                                            <p id="player-found-kills" class="text-gray-400 text-xs hidden">
+                                                Kills: <span id="player-kills-value" class="text-red-400 font-medium"></span>
+                                            </p>
+                                            <p id="player-found-source" class="text-gray-600 text-xs"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Player not found state -->
+                            <div id="panel-new" class="hidden">
+                                <div class="flex items-center gap-3 text-blue-400">
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <p class="text-sm" data-i18n="new_player">New player. Fill in your details below.</p>
+                                </div>
+                            </div>
+                            <!-- Kingdom required warning -->
+                            <div id="panel-kingdom-required" class="hidden">
+                                <div class="flex items-center gap-3 text-amber-400">
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                    </svg>
+                                    <p class="text-sm">⚠️ Enter both <strong>Player ID</strong> and <strong>Kingdom</strong> to search. Both fields are required.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label for="alliance_name" class="block text-sm font-medium text-gray-300 mb-1">Alliance</label>
-                        <input type="text" name="alliance_name" id="alliance_name" placeholder="e.g. KVK" class="block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md shadow-sm text-gray-200 focus:border-kvk-gold focus:ring focus:ring-kvk-gold focus:ring-opacity-50">
+
+                    <!-- Player form fields (always visible) -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+                        <div>
+                            <label for="player_name" class="block text-sm font-semibold text-gray-300 mb-2">
+                                <span data-i18n="label_player_name">In-Game Name</span> <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" name="player_name" id="player_name" required
+                                   data-i18n-placeholder="hint_player_name" placeholder="e.g. NaGaSiS"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all">
+                        </div>
+                        <div>
+                            <label for="alliance_name" class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="label_alliance">Alliance</label>
+                            <input type="text" name="alliance_name" id="alliance_name"
+                                   data-i18n-placeholder="hint_alliance" placeholder="e.g. SØVEREЇGŃ"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="city_level" id="city-level-label" class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="label_tc_level">TC Level</label>
+                                <input type="number" name="city_level" id="city_level" min="1" max="55" placeholder="e.g. 30"
+                                       class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all">
+                            </div>
+                            <div>
+                                <label for="kingdom_num" class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="label_kingdom">Kingdom</label>
+                                <input type="number" name="kingdom_num" id="kingdom_num" min="1" placeholder="e.g. 2072"
+                                       class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all">
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                {% if enable_screenshot_upload %}
-                <div class="mt-6 border-t border-kvk-gray-700 pt-6">
-                    <label for="backpack_screenshot" class="block text-sm font-medium text-gray-300 mb-2">Backpack Screenshot (Optional)</label>
-                    <div class="flex items-center gap-4">
-                        <input type="file" name="backpack_screenshot" id="backpack_screenshot" accept="image/*" class="block w-full text-sm text-gray-400
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-md file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-kvk-gray-700 file:text-kvk-gold
-                            hover:file:bg-kvk-gray-600 transition">
-                        <p class="text-xs text-gray-500 italic">Upload a screenshot of your backpack to help verify your resources.</p>
-                    </div>
-                </div>
-                {% endif %}
             </div>
 
-            <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {% if event.active_days.construction %}
-                <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
-                    <h3 class="font-bold text-xl mb-2 text-amber-400">Day 1: Construction</h3>
-                    <p class="text-xs text-gray-400 mb-4 italic">Enter resources and select <strong>all feasible</strong> time slots. More slots give the system more flexibility to match you.</p>
-                    <div class="space-y-4 mb-4">
+            <!-- ===== IMAGE ANALYSIS SECTION ===== -->
+            <div class="bg-kvk-gray-800 rounded-2xl border border-kvk-gray-700 overflow-hidden">
+                <div class="p-6 border-b border-kvk-gray-700">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                            <span class="text-lg">🤖</span>
+                        </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
+                            <h2 class="text-xl font-bold text-white" data-i18n="ai_section_title">Análisis de Imágenes con IA</h2>
+                            <p class="text-gray-400 text-sm" data-i18n="ai_section_sub">Sube capturas de pantalla y la IA rellenará los datos automáticamente</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Backpack (Resources) Image -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-3">
+                            <span data-i18n="backpack_img_label">📦 Imagen de Mochila (Recursos)</span>
+                        </label>
+                        <div id="backpack-upload-zone" class="upload-zone rounded-xl p-6 text-center"
+                             onclick="document.getElementById('backpack_file').click()">
+                            <div id="backpack-placeholder">
+                                <svg class="w-10 h-10 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-gray-400 text-sm mb-1" data-i18n="img_click_or_drag">Haz clic o arrastra una imagen</p>
+                                <p class="text-gray-600 text-xs" data-i18n="backpack_tab_hint">Pestaña "Recursos" de la mochila</p>
+                            </div>
+                            <div id="backpack-preview" class="hidden">
+                                <img id="backpack-img" class="max-h-40 mx-auto rounded-lg mb-3" src="" alt="Preview">
+                                <p id="backpack-filename" class="text-green-400 text-xs"></p>
+                            </div>
+                        </div>
+                        <input type="file" id="backpack_file" name="backpack_screenshot" accept="image/*" class="hidden">
+                        <button type="button" id="analyze-backpack-btn"
+                                onclick="analyzeImage('backpack')"
+                                class="hidden mt-3 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl transition text-sm">
+                            <span data-i18n="analyze_resources_btn">🤖 Analizar Recursos</span>
+                        </button>
+                        <!-- Backpack analysis result -->
+                        <div id="backpack-result" class="hidden mt-3 bg-kvk-gray-900 rounded-xl p-4 text-sm border border-kvk-gray-700">
+                            <p class="text-gray-400 font-medium mb-2" data-i18n="resources_detected">Recursos detectados:</p>
+                            <div id="backpack-result-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Speedups Image -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-3">
+                            <span data-i18n="speedups_img_label">⚡ Imagen de Aceleradores (Speedups)</span>
+                        </label>
+                        <div id="speedups-upload-zone" class="upload-zone rounded-xl p-6 text-center"
+                             onclick="document.getElementById('accelerators_file').click()">
+                            <div id="speedups-placeholder">
+                                <svg class="w-10 h-10 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <p class="text-gray-400 text-sm mb-1" data-i18n="img_click_or_drag">Haz clic o arrastra una imagen</p>
+                                <p class="text-gray-600 text-xs" data-i18n="speedups_tab_hint">Pestaña "Acelerar" de la mochila</p>
+                            </div>
+                            <div id="speedups-preview" class="hidden">
+                                <img id="speedups-img" class="max-h-40 mx-auto rounded-lg mb-3" src="" alt="Preview">
+                                <p id="speedups-filename" class="text-green-400 text-xs"></p>
+                            </div>
+                        </div>
+                        <input type="file" id="accelerators_file" name="accelerators_screenshot" accept="image/*" class="hidden">
+                        <button type="button" id="analyze-speedups-btn"
+                                onclick="analyzeImage('speedups')"
+                                class="hidden mt-3 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl transition text-sm">
+                            <span data-i18n="analyze_speedups_btn">🤖 Analizar Aceleradores</span>
+                        </button>
+                        <!-- Speedups analysis result -->
+                        <div id="speedups-result" class="hidden mt-3 bg-kvk-gray-900 rounded-xl p-4 text-sm border border-kvk-gray-700">
+                            <p class="text-gray-400 font-medium mb-2" data-i18n="speedups_detected">Aceleradores detectados:</p>
+                            <div id="speedups-result-content"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== RESOURCES & SLOTS SECTION ===== -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {% if event.active_days.construction %}
+                <!-- Construction Day -->
+                <div class="bg-kvk-gray-800 rounded-2xl border border-amber-500/20 overflow-hidden">
+                    <div class="p-4 border-b border-kvk-gray-700 bg-amber-500/5">
+                        <h3 class="font-bold text-xl text-amber-400" data-i18n="day_construction">🏗️ Día 1: Construcción</h3>
+                        <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="speedups_construction_label">⏱️ Aceleradores de Construcción</label>
                             <div class="flex gap-2 mb-2">
-                                <button type="button" data-unit="days" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
-                                <button type="button" data-unit="hours" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
-                                <button type="button" data-unit="minutes" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
+                                <button type="button" data-unit="days" data-section="construction" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_days">Días</button>
+                                <button type="button" data-unit="hours" data-section="construction" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_hours">Horas</button>
+                                <button type="button" data-unit="minutes" data-section="construction" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition" data-i18n="unit_min">Min</button>
                             </div>
                             <div id="input-group-construction" class="grid grid-cols-3 gap-2">
                                 <div class="hidden" id="days-container-construction">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
-                                    <input type="number" id="days-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_days_label">Días</label>
+                                    <input type="number" id="days-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                                 <div class="hidden" id="hours-container-construction">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
-                                    <input type="number" id="hours-construction" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_hours_label">Horas</label>
+                                    <input type="number" id="hours-construction" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                                 <div id="minutes-container-construction">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
-                                    <input type="number" id="mins-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_minutes_label">Minutos</label>
+                                    <input type="number" id="mins-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                             </div>
                             <input type="hidden" name="speedups-construction" id="speedups-construction" value="0">
+                            <p id="speedups-construction-display" class="text-xs text-kvk-gold mt-1"></p>
                         </div>
                         <div>
-                            <label for="truegold" class="block text-sm font-medium text-gray-300">TrueGold</label>
-                            <input type="number" name="truegold" id="truegold" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            <label for="truegold" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="truegold_label">🥇 TrueGold</label>
+                            <input type="number" name="truegold" id="truegold" min="0"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
                         </div>
                         <div>
-                            <label for="tempered_truegold" class="block text-sm font-medium text-gray-300">Tempered TrueGold</label>
-                            <input type="number" name="tempered_truegold" id="tempered_truegold" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            <label for="tempered_truegold" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="tempered_truegold_label">✨ TrueGold Templado</label>
+                            <input type="number" name="tempered_truegold" id="tempered_truegold" min="0"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="time_slots_label">🕐 Franjas Horarias</label>
+                            <div id="slot-grid-construction" class="grid grid-cols-7 gap-1 mb-2">
+                                {% for i in range(slot_labels|length) %}
+                                <div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="selectAllSlots('construction')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_select_all">Todas</button>
+                                <button type="button" onclick="clearSlots('construction')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_clear">Limpiar</button>
+                            </div>
+                            <input type="hidden" name="slots-construction" id="slots-input-construction">
                         </div>
                     </div>
-                    <div id="slot-grid-construction" class="grid grid-cols-7 gap-1 mb-4">
-                        {% for i in range(slot_labels|length) %}<div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>{% endfor %}
-                    </div>
-                    <input type="hidden" name="slots-construction" id="slots-input-construction">
                 </div>
                 {% endif %}
 
                 {% if event.active_days.training %}
-                <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
-                    <h3 class="font-bold text-xl mb-2 text-red-500">Day 4: Troop Training</h3>
-                    <p class="text-xs text-gray-400 mb-4 italic">Enter resources and select <strong>all feasible</strong> time slots. More slots give the system more flexibility to match you.</p>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
-                        <div class="flex gap-2 mb-2">
-                            <button type="button" data-unit="days" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
-                            <button type="button" data-unit="hours" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
-                            <button type="button" data-unit="minutes" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
-                        </div>
-                        <div id="input-group-training" class="grid grid-cols-3 gap-2">
-                            <div class="hidden" id="days-container-training">
-                                <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
-                                <input type="number" id="days-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
-                            </div>
-                            <div class="hidden" id="hours-container-training">
-                                <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
-                                <input type="number" id="hours-training" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
-                            </div>
-                            <div id="minutes-container-training">
-                                <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
-                                <input type="number" id="mins-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
-                            </div>
-                        </div>
-                        <input type="hidden" name="speedups-training" id="speedups-training" value="0">
+                <!-- Training Day -->
+                <div class="bg-kvk-gray-800 rounded-2xl border border-red-500/20 overflow-hidden">
+                    <div class="p-4 border-b border-kvk-gray-700 bg-red-500/5">
+                        <h3 class="font-bold text-xl text-red-400" data-i18n="day_training">⚔️ Día 4: Entrenamiento</h3>
+                        <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
                     </div>
-                    <div id="slot-grid-training" class="grid grid-cols-7 gap-1 mb-4">
-                        {% for i in range(slot_labels|length) %}<div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>{% endfor %}
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="speedups_training_label">⏱️ Aceleradores de Entrenamiento</label>
+                            <div class="flex gap-2 mb-2">
+                                <button type="button" data-unit="days" data-section="training" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_days">Días</button>
+                                <button type="button" data-unit="hours" data-section="training" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_hours">Horas</button>
+                                <button type="button" data-unit="minutes" data-section="training" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition" data-i18n="unit_min">Min</button>
+                            </div>
+                            <div id="input-group-training" class="grid grid-cols-3 gap-2">
+                                <div class="hidden" id="days-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_days_label">Días</label>
+                                    <input type="number" id="days-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
+                                </div>
+                                <div class="hidden" id="hours-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_hours_label">Horas</label>
+                                    <input type="number" id="hours-training" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
+                                </div>
+                                <div id="minutes-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_minutes_label">Minutos</label>
+                                    <input type="number" id="mins-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
+                                </div>
+                            </div>
+                            <input type="hidden" name="speedups-training" id="speedups-training" value="0">
+                            <p id="speedups-training-display" class="text-xs text-kvk-gold mt-1"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="time_slots_label">🕐 Franjas Horarias</label>
+                            <div id="slot-grid-training" class="grid grid-cols-7 gap-1 mb-2">
+                                {% for i in range(slot_labels|length) %}
+                                <div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="selectAllSlots('training')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_select_all">Todas</button>
+                                <button type="button" onclick="clearSlots('training')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_clear">Limpiar</button>
+                            </div>
+                            <input type="hidden" name="slots-training" id="slots-input-training">
+                        </div>
                     </div>
-                    <input type="hidden" name="slots-training" id="slots-input-training">
                 </div>
                 {% endif %}
-                
+
                 {% if event.active_days.research %}
-                <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
-                    <h3 class="font-bold text-xl mb-2 text-blue-500">Day {{ event.active_days.research_day if event.active_days.research_day else '5' }}: Research</h3>
-                    <p class="text-xs text-gray-400 mb-4 italic">Enter resources and select <strong>all feasible</strong> time slots. More slots give the system more flexibility to match you.</p>
-                     <div class="space-y-4 mb-4">
+                <!-- Research Day -->
+                <div class="bg-kvk-gray-800 rounded-2xl border border-blue-500/20 overflow-hidden">
+                    <div class="p-4 border-b border-kvk-gray-700 bg-blue-500/5">
+                        <h3 class="font-bold text-xl text-blue-400">🔬 Día {{ event.active_days.research_day if event.active_days.research_day else '5' }}<span data-i18n="day_research_suffix">: Investigación</span></h3>
+                        <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
+                    </div>
+                    <div class="p-4 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="speedups_research_label">⏱️ Aceleradores de Investigación</label>
                             <div class="flex gap-2 mb-2">
-                                <button type="button" data-unit="days" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
-                                <button type="button" data-unit="hours" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
-                                <button type="button" data-unit="minutes" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
+                                <button type="button" data-unit="days" data-section="research" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_days">Días</button>
+                                <button type="button" data-unit="hours" data-section="research" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gray-700 bg-kvk-gray-900 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="unit_hours">Horas</button>
+                                <button type="button" data-unit="minutes" data-section="research" class="unit-btn flex-1 py-1.5 px-2 text-xs rounded-lg border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition" data-i18n="unit_min">Min</button>
                             </div>
                             <div id="input-group-research" class="grid grid-cols-3 gap-2">
                                 <div class="hidden" id="days-container-research">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
-                                    <input type="number" id="days-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_days_label">Días</label>
+                                    <input type="number" id="days-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                                 <div class="hidden" id="hours-container-research">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
-                                    <input type="number" id="hours-research" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_hours_label">Horas</label>
+                                    <input type="number" id="hours-research" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                                 <div id="minutes-container-research">
-                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
-                                    <input type="number" id="mins-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1" data-i18n="unit_minutes_label">Minutos</label>
+                                    <input type="number" id="mins-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 text-sm px-2 py-2">
                                 </div>
                             </div>
                             <input type="hidden" name="speedups-research" id="speedups-research" value="0">
+                            <p id="speedups-research-display" class="text-xs text-kvk-gold mt-1"></p>
                         </div>
                         <div>
-                            <label for="truegold_dust" class="block text-sm font-medium text-gray-300">TrueGold Dust</label>
-                            <input type="number" name="truegold_dust" id="truegold_dust" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            <label for="truegold_dust" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="truegold_dust_label">✨ TrueGold Dust</label>
+                            <input type="number" name="truegold_dust" id="truegold_dust" min="0"
+                                   class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2" data-i18n="time_slots_label">🕐 Franjas Horarias</label>
+                            <div id="slot-grid-research" class="grid grid-cols-7 gap-1 mb-2">
+                                {% for i in range(slot_labels|length) %}
+                                <div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="selectAllSlots('research')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_select_all">Todas</button>
+                                <button type="button" onclick="clearSlots('research')" class="flex-1 text-xs py-1.5 rounded-lg border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition" data-i18n="btn_clear">Limpiar</button>
+                            </div>
+                            <input type="hidden" name="slots-research" id="slots-input-research">
                         </div>
                     </div>
-                    <div id="slot-grid-research" class="grid grid-cols-7 gap-1 mb-4">
-                        {% for i in range(slot_labels|length) %}<div class="slot" data-index="{{ i }}"><div class="slot-content">{{ slot_labels[i] }}</div></div>{% endfor %}
-                    </div>
-                    <input type="hidden" name="slots-research" id="slots-input-research">
                 </div>
                 {% endif %}
             </div>
 
-            <button type="submit" class="mt-6 w-full bg-kvk-gold text-kvk-gray-900 font-bold py-3 px-4 rounded-md hover:bg-amber-500 transition duration-300">Submit All Entries</button>
+            <!-- Submit Button -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button type="submit" id="submit-btn"
+                        class="flex-1 bg-kvk-gold text-kvk-gray-900 font-bold py-4 px-6 rounded-xl hover:bg-kvk-amber transition-all duration-300 text-lg transform hover:scale-[1.01]">
+                    <span data-i18n="btn_submit_form">⚔️ Enviar Mis Datos</span>
+                </button>
+                <a id="btn-calendar-link"
+                   href="{{ url_for('locked_appointments', event_uid=event.uid) }}?ref=player"
+                   class="flex items-center justify-center gap-2 border border-kvk-gray-700 text-gray-400 hover:text-kvk-gold hover:border-kvk-gold/50 py-4 px-6 rounded-xl transition font-medium">
+                    <span data-i18n="btn_view_calendar">📅 Ver Calendario</span>
+                </a>
+
+            </div>
         </form>
 
-        <footer class="mt-12 pb-8 text-center border-t border-kvk-gray-700 pt-8">
-            <a href="https://github.com/prashmohan/kingdom-appt-planner" target="_blank" class="text-gray-500 hover:text-kvk-gold transition inline-block">
-                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 .297c-6.63 0-11.5 5.373-11.5 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.02-1.04-.032-2.043-3.197.69-3.872-1.542-3.872-1.542-.523-1.328-1.277-1.682-1.277-1.682-1.044-.714.079-.7.079-.7 1.154.08 1.761 1.186 1.761 1.186 1.026 1.756 2.99 1.248 3.718.954.103-.744.515-1.248.958-1.535-2.552-.29-5.232-1.276-5.232-5.676 0-1.253.448-2.277 1.182-3.078-.117-.29-.513-1.458.113-3.037 0 0 .96-.307 3.148 1.174.912-.254 1.89-.381 2.86-.386.97.005 1.948.132 2.86.386 2.186-1.481 3.145-1.174 3.145-1.174.628 1.579.232 2.747.115 3.037.736.801 1.18 1.825 1.18 3.078 0 4.41-2.685 5.383-5.242 5.666.413.354.78 1.053.78 2.122 0 1.532-.014 2.768-.014 3.143 0 .323.217.698.826.577C20.565 22.092 24 17.592 24 12.297c0-6.627-4.87-12-11.5-12z"/>
-                </svg>
-            </a>
+        <footer class="mt-10 pb-8 text-center text-gray-600 text-sm">
+            <p data-i18n="footer_kvk">Construido con ❤️ para la comunidad KingShot · Domina tu KvK ⚔️</p>
         </footer>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            
-            function initializeGrid(gridId) {
-                const grid = document.getElementById(gridId);
-                if (!grid) return;
+    const EVENT_UID = '{{ event.uid }}';
+    const CSRF_TOKEN = '{{ csrf_token() }}';
 
-                const slotsInput = document.getElementById(gridId.replace('slot-grid', 'slots-input'));
-                let isMouseDown = false;
+    // =========================================================
+    // PLAYER ID LOOKUP
+    // =========================================================
+    let currentPreviousData = null;
 
-                grid.addEventListener('mousedown', function (e) {
-                    if (e.target.classList.contains('slot') || e.target.parentElement.classList.contains('slot')) {
-                        e.preventDefault();
-                        isMouseDown = true;
-                        toggleSlot(e.target);
-                    }
-                });
+    const playerIdInput = document.getElementById('player_id');
+    const kingdomSearchInput = document.getElementById('kingdom_search');
+    const kingdomNumInput = document.getElementById('kingdom_num');
 
-                grid.addEventListener('mouseover', function (e) {
-                    if (isMouseDown && (e.target.classList.contains('slot') || e.target.parentElement.classList.contains('slot'))) {
-                        toggleSlot(e.target);
-                    }
-                });
+    // Sync the search kingdom field with the form's kingdom_num field
+    if (kingdomSearchInput && kingdomNumInput) {
+        kingdomSearchInput.addEventListener('input', function() {
+            kingdomNumInput.value = this.value;
+        });
+        kingdomNumInput.addEventListener('input', function() {
+            kingdomSearchInput.value = this.value;
+        });
+    }
 
-                document.addEventListener('mouseup', function () {
-                    isMouseDown = false;
-                });
-                
-                function toggleSlot(element) {
-                    if (!element.classList.contains('slot')) {
-                        element = element.parentElement;
-                    }
-                    element.classList.toggle('selected');
-                    updateSlotsInput();
-                }
+    // Allow pressing Enter in either search field to trigger lookup
+    [playerIdInput, kingdomSearchInput].forEach(el => {
+        if (el) el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); triggerLookup(); }
+        });
+    });
 
-                function updateSlotsInput() {
-                    const selectedSlots = [];
-                    grid.querySelectorAll('.slot.selected').forEach(slot => {
-                        selectedSlots.push(parseInt(slot.dataset.index));
-                    });
-                    slotsInput.value = JSON.stringify(selectedSlots);
-                }
-                
-                updateSlotsInput();
+    // Auto-lookup if pre-filled (both ID and a kingdom stored)
+    const prefillId = '{{ player_id_prefill }}';
+    if (prefillId) {
+        playerIdInput.value = prefillId;
+        lookupPlayer(prefillId, '');
+    }
+
+    // Keep the calendar button URL in sync with the player_id input
+    function syncCalendarLink() {
+        const calBtn = document.getElementById('btn-calendar-link');
+        if (!calBtn) return;
+        const pid = playerIdInput ? playerIdInput.value.trim() : '';
+        const base = calBtn.href.split('?')[0];
+        calBtn.href = base + '?ref=player' + (pid ? '&player_id=' + encodeURIComponent(pid) : '');
+    }
+    if (playerIdInput) {
+        playerIdInput.addEventListener('input', syncCalendarLink);
+        syncCalendarLink();
+    }
+
+
+    // Called by the Search button or Enter key
+    function triggerLookup() {
+        const id = playerIdInput ? playerIdInput.value.trim() : '';
+        const kingdom = kingdomSearchInput ? kingdomSearchInput.value.trim() : '';
+
+        let hasError = false;
+
+        if (!id || !/^\d+$/.test(id)) {
+            playerIdInput.classList.add('border-red-500');
+            setTimeout(() => playerIdInput.classList.remove('border-red-500'), 2000);
+            hasError = true;
+        }
+        if (!kingdom || !/^\d+$/.test(kingdom)) {
+            kingdomSearchInput.classList.add('border-red-500');
+            setTimeout(() => kingdomSearchInput.classList.remove('border-red-500'), 2000);
+            hasError = true;
+        }
+
+        if (hasError) {
+            showPanelKingdomRequired();
+            return;
+        }
+
+        // Sync form kingdom_num
+        if (kingdomNumInput) kingdomNumInput.value = kingdom;
+        lookupPlayer(id, kingdom);
+    }
+    window.triggerLookup = triggerLookup;
+
+    async function lookupPlayer(playerId, kingdom) {
+        if (kingdom === undefined) {
+            kingdom = kingdomSearchInput ? kingdomSearchInput.value.trim() : '';
+        }
+        document.getElementById('id-spinner').classList.remove('hidden');
+        document.getElementById('id-check').classList.add('hidden');
+        showPanelEmpty();
+
+        const url = `/event/${EVENT_UID}/lookup_player?player_id=${encodeURIComponent(playerId)}${kingdom ? '&kingdom=' + encodeURIComponent(kingdom) : ''}`;
+
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            document.getElementById('id-spinner').classList.add('hidden');
+
+            if (data.found) {
+                showPanelFound(data);
+                currentPreviousData = data;
+                populateFormWithPreviousData(data);
+                document.getElementById('id-check').classList.remove('hidden');
+            } else if (data.requires_kingdom) {
+                // Backend says kingdom is needed — shouldn't happen if triggerLookup validates,
+                // but handle gracefully just in case
+                showPanelKingdomRequired();
+            } else {
+                showPanelNew();
             }
+        } catch (err) {
+            document.getElementById('id-spinner').classList.add('hidden');
+            showPanelNew();
+        }
+    }
 
-            initializeGrid('slot-grid-construction');
-            initializeGrid('slot-grid-training');
-            initializeGrid('slot-grid-research');
+    function showPanelEmpty() {
+        document.getElementById('panel-empty').classList.remove('hidden');
+        document.getElementById('panel-found').classList.add('hidden');
+        document.getElementById('panel-new').classList.add('hidden');
+        document.getElementById('panel-kingdom-required').classList.add('hidden');
+    }
 
-            // Speedup Unit Selection and Calculation
-            const sections = ['construction', 'training', 'research'];
-            
-            sections.forEach(section => {
-                const group = document.getElementById(`input-group-${section}`);
-                if (!group) return;
+    function showPanelKingdomRequired() {
+        document.getElementById('panel-empty').classList.add('hidden');
+        document.getElementById('panel-found').classList.add('hidden');
+        document.getElementById('panel-new').classList.add('hidden');
+        document.getElementById('panel-kingdom-required').classList.remove('hidden');
+    }
 
-                const unitBtns = document.querySelectorAll(`.unit-btn[data-section="${section}"]`);
-                const daysContainer = document.getElementById(`days-container-${section}`);
-                const hoursContainer = document.getElementById(`hours-container-${section}`);
-                const minutesContainer = document.getElementById(`minutes-container-${section}`);
-                
-                const daysInput = document.getElementById(`days-${section}`);
-                const hoursInput = document.getElementById(`hours-${section}`);
-                const minsInput = document.getElementById(`mins-${section}`);
-                const hiddenInput = document.getElementById(`speedups-${section}`);
+    function showPanelFound(data) {
+        document.getElementById('panel-empty').classList.add('hidden');
+        document.getElementById('panel-found').classList.remove('hidden');
+        document.getElementById('panel-new').classList.add('hidden');
 
-                unitBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const unit = btn.dataset.unit;
-                        
-                        // Update button styles
-                        unitBtns.forEach(b => {
-                            b.classList.remove('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
-                            b.classList.add('bg-kvk-gray-700', 'text-gray-400', 'border-kvk-gray-700');
-                        });
-                        btn.classList.add('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
-                        btn.classList.remove('bg-kvk-gray-700', 'text-gray-400', 'border-kvk-gray-700');
+        document.getElementById('player-found-name').textContent = data.player_name || '';
+        document.getElementById('player-found-alliance').textContent = data.alliance_name ? `\u{1F6E1}\uFE0F ${data.alliance_name}` : '';
 
-                        // Show/Hide containers
-                        if (unit === 'days') {
-                            daysContainer.classList.remove('hidden');
-                            hoursContainer.classList.remove('hidden');
-                            minutesContainer.classList.remove('hidden');
-                        } else if (unit === 'hours') {
-                            daysContainer.classList.add('hidden');
-                            hoursContainer.classList.remove('hidden');
-                            minutesContainer.classList.remove('hidden');
-                            daysInput.value = '';
-                        } else {
-                            daysContainer.classList.add('hidden');
-                            hoursContainer.classList.add('hidden');
-                            minutesContainer.classList.remove('hidden');
-                            daysInput.value = '';
-                            hoursInput.value = '';
-                        }
-                        calculateTotal();
-                    });
-                });
+        const subCount = Object.keys(data.submissions || {}).length;
+        const source = data.source || '';
+        let statusText;
+        if (subCount > 0) {
+            const tmpl = (window.t && window.t('status_found_db')) || 'Data loaded from {count} day(s). You can edit and resubmit.';
+            statusText = tmpl.replace('{count}', subCount);
+        } else if (source === 'kingshot.com.br') {
+            statusText = (window.t && window.t('status_found_web')) || 'Found on kingshot.com.br. No previous data for this event.';
+        } else {
+            statusText = (window.t && window.t('status_identified')) || 'Player identified.';
+        }
+        document.getElementById('player-found-status').textContent = statusText;
 
-                function calculateTotal() {
-                    const d = parseInt(daysInput.value || 0);
-                    const h = parseInt(hoursInput.value || 0);
-                    const m = parseInt(minsInput.value || 0);
-                    
-                    const total = (d * 1440) + (h * 60) + m;
-                    hiddenInput.value = total;
-                }
+        // Source badge
+        const sourceEl = document.getElementById('player-found-source');
+        if (sourceEl) {
+            sourceEl.textContent = source === 'kingshot.com.br' ? '\u{1F310} kingshot.com.br' : source === 'local_db' ? '\u{1F4BE} Local' : '';
+        }
 
-                [daysInput, hoursInput, minsInput].forEach(input => {
-                    input.addEventListener('input', () => {
-                        // Basic validation: only cap hours/mins if we are in a higher unit mode
-                        if (input === hoursInput && !daysContainer.classList.contains('hidden')) {
-                            if (parseInt(input.value) > 23) input.value = 23;
-                        }
-                        if (input === minsInput && (!hoursContainer.classList.contains('hidden') || !daysContainer.classList.contains('hidden'))) {
-                            if (parseInt(input.value) > 59) input.value = 59;
-                        }
-                        
-                        calculateTotal();
-                    });
-                });
+        // Power and kills
+        if (data.power) {
+            document.getElementById('player-found-power').classList.remove('hidden');
+            document.getElementById('player-power-value').textContent = data.power;
+        } else {
+            document.getElementById('player-found-power').classList.add('hidden');
+        }
+        if (data.kills) {
+            document.getElementById('player-found-kills').classList.remove('hidden');
+            document.getElementById('player-kills-value').textContent = data.kills;
+        } else {
+            document.getElementById('player-found-kills').classList.add('hidden');
+        }
+
+        // Avatar
+        if (data.avatar_url) {
+            const avatarEl = document.getElementById('player-avatar');
+            avatarEl.src = data.avatar_url;
+            avatarEl.classList.remove('hidden');
+            document.getElementById('player-avatar-placeholder').classList.add('hidden');
+            document.getElementById('avatar_url_field').value = data.avatar_url;
+        }
+
+        // City/TG/TC level badge and label
+        if (data.city_label || data.city_level) {
+            const badge = document.getElementById('city-badge');
+            badge.textContent = data.city_label || `TC ${data.city_level}`;
+            badge.classList.remove('hidden');
+
+            // Update the form label to match TG/TC prefix
+            const levelLabel = document.getElementById('city-level-label');
+            if (levelLabel) {
+                const isTC = !data.city_label || !data.city_label.toUpperCase().startsWith('TG');
+                levelLabel.textContent = isTC ? 'TC Level' : 'TG Level';
+            }
+        }
+
+        // Pre-fill form fields
+        if (data.player_name) document.getElementById('player_name').value = data.player_name;
+        if (data.alliance_name) document.getElementById('alliance_name').value = data.alliance_name;
+        if (data.city_level) document.getElementById('city_level').value = data.city_level;
+        if (data.kingdom) {
+            if (document.getElementById('kingdom_num')) document.getElementById('kingdom_num').value = data.kingdom;
+            if (document.getElementById('kingdom_search')) document.getElementById('kingdom_search').value = data.kingdom;
+        }
+    }
+
+    function showPanelNew() {
+        document.getElementById('panel-empty').classList.add('hidden');
+        document.getElementById('panel-found').classList.add('hidden');
+        document.getElementById('panel-new').classList.remove('hidden');
+        document.getElementById('panel-kingdom-required').classList.add('hidden');
+    }
+
+    // =========================================================
+    // PRE-POPULATE FORM FROM PREVIOUS DATA
+    // =========================================================
+    function minutesToDisplay(minutes) {
+        if (!minutes) return '';
+        const d = Math.floor(minutes / 1440);
+        const h = Math.floor((minutes % 1440) / 60);
+        const m = minutes % 60;
+        const parts = [];
+        if (d > 0) parts.push(`${d}d`);
+        if (h > 0) parts.push(`${h}h`);
+        if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+        return parts.join(' ');
+    }
+
+    function populateFormWithPreviousData(data) {
+        const subs = data.submissions || {};
+
+        // Construction
+        if (subs.construction) {
+            const rd = subs.construction.raw_data || {};
+            if (rd.speedups) {
+                setSpeedupMinutes('construction', rd.speedups);
+            }
+            if (rd.truegold !== undefined) document.getElementById('truegold').value = rd.truegold;
+            if (rd.tempered_truegold !== undefined) document.getElementById('tempered_truegold').value = rd.tempered_truegold;
+            if (subs.construction.feasible_slots) {
+                restoreSlots('construction', subs.construction.feasible_slots);
+            }
+        }
+
+        // Training
+        if (subs.training) {
+            const rd = subs.training.raw_data || {};
+            if (rd.speedups) setSpeedupMinutes('training', rd.speedups);
+            if (subs.training.feasible_slots) restoreSlots('training', subs.training.feasible_slots);
+        }
+
+        // Research
+        if (subs.research) {
+            const rd = subs.research.raw_data || {};
+            if (rd.speedups) setSpeedupMinutes('research', rd.speedups);
+            if (rd.truegold_dust !== undefined) document.getElementById('truegold_dust').value = rd.truegold_dust;
+            if (subs.research.feasible_slots) restoreSlots('research', subs.research.feasible_slots);
+        }
+    }
+
+    function setSpeedupMinutes(section, totalMinutes) {
+        const d = Math.floor(totalMinutes / 1440);
+        const h = Math.floor((totalMinutes % 1440) / 60);
+        const m = totalMinutes % 60;
+
+        // Switch to days mode if we have days
+        const unitBtns = document.querySelectorAll(`.unit-btn[data-section="${section}"]`);
+        if (d > 0) {
+            // Click the "days" button
+            unitBtns.forEach(btn => {
+                if (btn.dataset.unit === 'days') btn.click();
             });
+            document.getElementById(`days-${section}`).value = d;
+            document.getElementById(`hours-${section}`).value = h;
+            document.getElementById(`mins-${section}`).value = m;
+        } else if (h > 0) {
+            unitBtns.forEach(btn => {
+                if (btn.dataset.unit === 'hours') btn.click();
+            });
+            document.getElementById(`hours-${section}`).value = h;
+            document.getElementById(`mins-${section}`).value = m;
+        } else {
+            document.getElementById(`mins-${section}`).value = m;
+        }
 
-            // Form Validation
-            const form = document.querySelector('form');
-            form.addEventListener('submit', function(e) {
-                // 1. Validate Player ID & Name
-                const player_id = document.getElementById('player_id').value.trim();
-                const player_name = document.getElementById('player_name').value.trim();
+        document.getElementById(`speedups-${section}`).value = totalMinutes;
+        const display = document.getElementById(`speedups-${section}-display`);
+        if (display) display.textContent = minutesToDisplay(totalMinutes);
+    }
 
-                if (!/^\d+$/.test(player_id)) {
-                    e.preventDefault();
-                    alert("Player ID must be numeric.");
-                    return;
-                }
+    function restoreSlots(section, slots) {
+        const grid = document.getElementById(`slot-grid-${section}`);
+        if (!grid) return;
 
-                if (!player_name) {
-                    e.preventDefault();
-                    alert("Please enter a valid Player Name.");
-                    return;
-                }
+        // Deselect all first
+        grid.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
 
-                const days = [
-                    { id: 'construction', name: 'Construction', speedups: 'speedups-construction', gold: 'truegold', gold2: 'tempered_truegold', slots: 'slots-input-construction' },
-                    { id: 'training', name: 'Training', speedups: 'speedups-training', slots: 'slots-input-training' },
-                    { id: 'research', name: 'Research', speedups: 'speedups-research', gold: 'truegold_dust', slots: 'slots-input-research' }
-                ];
+        // Select the ones from previous data
+        slots.forEach(idx => {
+            const slot = grid.querySelector(`.slot[data-index="${idx}"]`);
+            if (slot) slot.classList.add('selected');
+        });
 
-                let daysAttempted = 0;
-                let daysInvalid = [];
+        updateSlotsInput(section);
+    }
 
-                days.forEach(day => {
-                    const speedupsInput = document.getElementById(day.speedups);
-                    if (!speedupsInput) return; // Day not active
+    // =========================================================
+    // SLOT GRID MANAGEMENT
+    // =========================================================
+    function initializeGrid(section) {
+        const grid = document.getElementById(`slot-grid-${section}`);
+        if (!grid) return;
+        let isMouseDown = false;
+        let addingMode = true;
 
-                    const speedups = parseInt(speedupsInput.value || 0);
-                    const gold = day.gold ? parseInt(document.getElementById(day.gold).value || 0) : 0;
-                    const gold2 = day.gold2 ? parseInt(document.getElementById(day.gold2).value || 0) : 0;
-                    const slotsVal = document.getElementById(day.slots).value || "[]";
-                    const slots = JSON.parse(slotsVal);
+        grid.addEventListener('mousedown', function(e) {
+            const slot = e.target.classList.contains('slot') ? e.target : e.target.closest('.slot');
+            if (slot) {
+                e.preventDefault();
+                isMouseDown = true;
+                addingMode = !slot.classList.contains('selected');
+                slot.classList.toggle('selected');
+                updateSlotsInput(section);
+            }
+        });
 
-                    if (speedups > 0 || gold > 0 || gold2 > 0) {
-                        daysAttempted++;
-                        if (slots.length === 0) {
-                            daysInvalid.push(day.name);
-                        }
-                    }
+        grid.addEventListener('mouseover', function(e) {
+            if (!isMouseDown) return;
+            const slot = e.target.classList.contains('slot') ? e.target : e.target.closest('.slot');
+            if (slot) {
+                if (addingMode) slot.classList.add('selected');
+                else slot.classList.remove('selected');
+                updateSlotsInput(section);
+            }
+        });
+
+        // Touch support
+        grid.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = el && (el.classList.contains('slot') ? el : el.closest('.slot'));
+            if (slot) {
+                slot.classList.add('selected');
+                updateSlotsInput(section);
+            }
+        }, { passive: false });
+
+        document.addEventListener('mouseup', () => { isMouseDown = false; });
+        updateSlotsInput(section);
+    }
+
+    function updateSlotsInput(section) {
+        const grid = document.getElementById(`slot-grid-${section}`);
+        const input = document.getElementById(`slots-input-${section}`);
+        if (!grid || !input) return;
+        const selected = [];
+        grid.querySelectorAll('.slot.selected').forEach(slot => {
+            selected.push(parseInt(slot.dataset.index));
+        });
+        input.value = JSON.stringify(selected);
+    }
+
+    function selectAllSlots(section) {
+        const grid = document.getElementById(`slot-grid-${section}`);
+        if (!grid) return;
+        grid.querySelectorAll('.slot').forEach(s => s.classList.add('selected'));
+        updateSlotsInput(section);
+    }
+
+    function clearSlots(section) {
+        const grid = document.getElementById(`slot-grid-${section}`);
+        if (!grid) return;
+        grid.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+        updateSlotsInput(section);
+    }
+
+    initializeGrid('construction');
+    initializeGrid('training');
+    initializeGrid('research');
+
+    // =========================================================
+    // SPEEDUP UNIT SELECTION
+    // =========================================================
+    ['construction', 'training', 'research'].forEach(section => {
+        const group = document.getElementById(`input-group-${section}`);
+        if (!group) return;
+        const unitBtns = document.querySelectorAll(`.unit-btn[data-section="${section}"]`);
+        const daysContainer = document.getElementById(`days-container-${section}`);
+        const hoursContainer = document.getElementById(`hours-container-${section}`);
+        const minutesContainer = document.getElementById(`minutes-container-${section}`);
+        const daysInput = document.getElementById(`days-${section}`);
+        const hoursInput = document.getElementById(`hours-${section}`);
+        const minsInput = document.getElementById(`mins-${section}`);
+        const hiddenInput = document.getElementById(`speedups-${section}`);
+        const displayEl = document.getElementById(`speedups-${section}-display`);
+
+        unitBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const unit = btn.dataset.unit;
+                unitBtns.forEach(b => {
+                    b.classList.remove('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
+                    b.classList.add('bg-kvk-gray-900', 'text-gray-400', 'border-kvk-gray-700');
                 });
+                btn.classList.add('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
+                btn.classList.remove('bg-kvk-gray-900', 'text-gray-400', 'border-kvk-gray-700');
 
-                if (daysAttempted === 0) {
-                    e.preventDefault();
-                    alert("Please enter resource data for at least one event day.");
-                    return;
+                if (unit === 'days') {
+                    daysContainer.classList.remove('hidden');
+                    hoursContainer.classList.remove('hidden');
+                    minutesContainer.classList.remove('hidden');
+                } else if (unit === 'hours') {
+                    daysContainer.classList.add('hidden');
+                    hoursContainer.classList.remove('hidden');
+                    minutesContainer.classList.remove('hidden');
+                    if (daysInput) daysInput.value = '';
+                } else {
+                    daysContainer.classList.add('hidden');
+                    hoursContainer.classList.add('hidden');
+                    minutesContainer.classList.remove('hidden');
+                    if (daysInput) daysInput.value = '';
+                    if (hoursInput) hoursInput.value = '';
                 }
-
-                if (daysInvalid.length > 0) {
-                    e.preventDefault();
-                    alert("You must select at least one time slot for: " + daysInvalid.join(", "));
-                    return;
-                }
+                calculateTotal();
             });
         });
+
+        function calculateTotal() {
+            const d = parseInt(daysInput?.value || 0);
+            const h = parseInt(hoursInput?.value || 0);
+            const m = parseInt(minsInput?.value || 0);
+            const total = (d * 1440) + (h * 60) + m;
+            hiddenInput.value = total;
+            if (displayEl && total > 0) {
+                displayEl.textContent = `≈ ${minutesToDisplay(total)}`;
+            } else if (displayEl) {
+                displayEl.textContent = '';
+            }
+        }
+
+        [daysInput, hoursInput, minsInput].filter(Boolean).forEach(input => {
+            input.addEventListener('input', calculateTotal);
+        });
+    });
+
+    // =========================================================
+    // IMAGE UPLOAD & ANALYSIS
+    // =========================================================
+    function setupUploadZone(zoneId, fileInputId, previewId, imgId, filenameId, btnId) {
+        const zone = document.getElementById(zoneId);
+        const fileInput = document.getElementById(fileInputId);
+        const preview = document.getElementById(previewId);
+        const imgEl = document.getElementById(imgId);
+        const filenameEl = document.getElementById(filenameId);
+        const btn = document.getElementById(btnId);
+        const placeholder = document.getElementById(zoneId.replace('-upload-zone', '-placeholder'));
+
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgEl.src = e.target.result;
+                    filenameEl.textContent = file.name;
+                    placeholder.classList.add('hidden');
+                    preview.classList.remove('hidden');
+                    zone.classList.add('has-file');
+                    btn.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Drag and drop
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    setupUploadZone('backpack-upload-zone', 'backpack_file', 'backpack-preview', 'backpack-img', 'backpack-filename', 'analyze-backpack-btn');
+    setupUploadZone('speedups-upload-zone', 'accelerators_file', 'speedups-preview', 'speedups-img', 'speedups-filename', 'analyze-speedups-btn');
+
+    async function analyzeImage(type) {
+        const fileInputId = type === 'backpack' ? 'backpack_file' : 'accelerators_file';
+        const btnId = type === 'backpack' ? 'analyze-backpack-btn' : 'analyze-speedups-btn';
+        const resultId = type === 'backpack' ? 'backpack-result' : 'speedups-result';
+        const resultContentId = type === 'backpack' ? 'backpack-result-content' : 'speedups-result-content';
+
+        const fileInput = document.getElementById(fileInputId);
+        const btn = document.getElementById(btnId);
+
+        if (!fileInput.files || !fileInput.files[0]) return;
+
+        // Show loading state
+        btn.innerHTML = `<div class="spinner"></div><span>${window.t ? window.t('analyzing_ai') : 'Analizando con IA...'}</span>`;
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+        formData.append('type', type);
+        formData.append('csrf_token', CSRF_TOKEN);
+
+        try {
+            const resp = await fetch(`/event/${EVENT_UID}/analyze_image`, {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await resp.json();
+
+            const resultEl = document.getElementById(resultId);
+            const contentEl = document.getElementById(resultContentId);
+            resultEl.classList.remove('hidden');
+
+            if (!data.success) {
+                contentEl.innerHTML = `<p class="text-red-400">❌ ${data.error || (window.t ? window.t('error_analyzing') : 'Error al analizar la imagen')}</p>`;
+                if (data.error && data.error.includes('API key')) {
+                    contentEl.innerHTML += `<p class="text-gray-500 text-xs mt-2">${window.t ? window.t('configure_api_key') : 'Configura GEMINI_API_KEY en el archivo .env para habilitar el análisis automático.'}</p>`;
+                }
+            } else {
+                // Apply the data to the form
+                if (type === 'speedups') {
+                    applySpeedupResults(data, contentEl);
+                } else {
+                    applyBackpackResults(data, contentEl);
+                }
+            }
+
+        } catch (err) {
+            document.getElementById(resultId).classList.remove('hidden');
+            document.getElementById(resultContentId).innerHTML = `<p class="text-red-400">❌ ${window.t ? window.t('connection_error_prefix') : 'Error de conexión: '}${err.message}</p>`;
+        } finally {
+            btn.innerHTML = `<span>${window.t ? window.t('reanalyze_btn') : '🤖 Re-analizar'}</span>`;
+            btn.disabled = false;
+        }
+    }
+
+    function confidenceBadge(conf) {
+        const pct = Math.round((conf || 0) * 100);
+        const cls = pct >= 85 ? 'confidence-high' : pct >= 60 ? 'confidence-mid' : 'confidence-low';
+        return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${window.t ? window.t('confidence_label') : 'Confianza: '}${pct}%</span>`;
+    }
+
+    function minutesToDisplay(m) {
+        if (!m) return '0m';
+        const d = Math.floor(m / 1440);
+        const h = Math.floor((m % 1440) / 60);
+        const min = m % 60;
+        const parts = [];
+        if (d) parts.push(`${d}d`);
+        if (h) parts.push(`${h}h`);
+        if (min || !parts.length) parts.push(`${min}m`);
+        return parts.join(' ');
+    }
+
+    function applySpeedupResults(data, container) {
+        const results = [
+            { label: 'General', value: data.general, targetSection: null },
+            { label: 'Construcción', value: data.construction, targetSection: 'construction' },
+            { label: 'Entrenamiento', value: data.training, targetSection: 'training' },
+            { label: 'Investigación', value: data.research, targetSection: 'research' },
+            { label: 'Curación', value: data.healing, targetSection: null },
+        ];
+
+        let html = `<div class="space-y-1">`;
+        results.forEach(r => {
+            const display = minutesToDisplay(r.value);
+            html += `<div class="flex items-center justify-between">
+                <span class="text-gray-400">${r.label}:</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-white font-mono">${display}</span>
+                    ${r.targetSection && r.value > 0 ? `<button type="button" onclick="setSpeedupMinutes('${r.targetSection}', ${r.value})" class="text-xs bg-kvk-gold/20 hover:bg-kvk-gold/40 text-kvk-gold px-2 py-0.5 rounded transition">${window.t ? window.t('apply_btn') : 'Aplicar'}</button>` : ''}
+                </div>
+            </div>`;
+        });
+        html += `</div><div class="mt-3 pt-3 border-t border-kvk-gray-700 flex items-center justify-between">
+            ${confidenceBadge(data.confidence)}
+            <button type="button" onclick="applyAllSpeedups(${data.construction || 0}, ${data.training || 0}, ${data.research || 0})"
+                class="text-xs bg-kvk-gold text-kvk-gray-900 px-3 py-1.5 rounded-lg font-semibold hover:bg-kvk-amber transition">
+                ${window.t ? window.t('apply_all_btn') : 'Aplicar Todo'}
+            </button>
+        </div>`;
+
+        container.innerHTML = html;
+    }
+
+    function applyAllSpeedups(construction, training, research) {
+        if (construction) setSpeedupMinutes('construction', construction);
+        if (training) setSpeedupMinutes('training', training);
+        if (research) setSpeedupMinutes('research', research);
+    }
+
+    function applyBackpackResults(data, container) {
+        let html = `<div class="space-y-1">
+            <div class="flex items-center justify-between">
+                <span class="text-gray-400">TrueGold:</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-white font-mono">${(data.truegold || 0).toLocaleString()}</span>
+                    ${data.truegold > 0 ? `<button type="button" onclick="document.getElementById('truegold').value=${data.truegold}" class="text-xs bg-kvk-gold/20 hover:bg-kvk-gold/40 text-kvk-gold px-2 py-0.5 rounded transition">${window.t ? window.t('apply_btn') : 'Aplicar'}</button>` : ''}
+                </div>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-gray-400">TrueGold Dust:</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-white font-mono">${(data.truegold_dust || 0).toLocaleString()}</span>
+                    ${data.truegold_dust > 0 ? `<button type="button" onclick="document.getElementById('truegold_dust').value=${data.truegold_dust}" class="text-xs bg-kvk-gold/20 hover:bg-kvk-gold/40 text-kvk-gold px-2 py-0.5 rounded transition">${window.t ? window.t('apply_btn') : 'Aplicar'}</button>` : ''}
+                </div>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-gray-400">TrueGold Template:</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-white font-mono">${(data.truegold_template || 0).toLocaleString()}</span>
+                    ${data.truegold_template > 0 ? `<button type="button" onclick="document.getElementById('tempered_truegold').value=${data.truegold_template}" class="text-xs bg-kvk-gold/20 hover:bg-kvk-gold/40 text-kvk-gold px-2 py-0.5 rounded transition">${window.t ? window.t('apply_btn') : 'Aplicar'}</button>` : ''}
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-kvk-gray-700 flex items-center justify-between">
+            ${confidenceBadge(data.confidence)}
+            <button type="button" onclick="applyAllBackpack(${data.truegold || 0}, ${data.truegold_dust || 0}, ${data.truegold_template || 0})"
+                class="text-xs bg-kvk-gold text-kvk-gray-900 px-3 py-1.5 rounded-lg font-semibold hover:bg-kvk-amber transition">
+                ${window.t ? window.t('apply_all_btn') : 'Aplicar Todo'}
+            </button>
+        </div>`;
+
+        if (data.notes) {
+            html += `<p class="text-gray-500 text-xs mt-2 italic">${data.notes}</p>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    function applyAllBackpack(truegold, truegold_dust, truegold_template) {
+        if (truegold) document.getElementById('truegold').value = truegold;
+        if (truegold_dust) document.getElementById('truegold_dust').value = truegold_dust;
+        if (truegold_template) document.getElementById('tempered_truegold').value = truegold_template;
+    }
+
+    // =========================================================
+    // FORM VALIDATION
+    // =========================================================
+    document.getElementById('main-form').addEventListener('submit', function(e) {
+        const player_id = document.getElementById('player_id').value.trim();
+        const player_name = document.getElementById('player_name').value.trim();
+
+        if (!/^\d+$/.test(player_id)) {
+            e.preventDefault();
+            alert(window.t ? window.t('alert_id_numeric') : 'El ID de jugador debe ser numérico.');
+            return;
+        }
+        if (!player_name) {
+            e.preventDefault();
+            alert(window.t ? window.t('alert_player_name_required') : 'Por favor introduce tu nombre de jugador.');
+            return;
+        }
+
+        const days = [
+            { id: 'construction', name: (window.t ? window.t('day_construction_name') : 'Construcción'), speedups: 'speedups-construction', gold: 'truegold', gold2: 'tempered_truegold', slots: 'slots-input-construction' },
+            { id: 'training', name: (window.t ? window.t('day_training_name') : 'Entrenamiento'), speedups: 'speedups-training', slots: 'slots-input-training' },
+            { id: 'research', name: (window.t ? window.t('day_research_name') : 'Investigación'), speedups: 'speedups-research', gold: 'truegold_dust', slots: 'slots-input-research' }
+        ];
+
+        let daysAttempted = 0;
+        let daysInvalid = [];
+
+        days.forEach(day => {
+            const speedupsInput = document.getElementById(day.speedups);
+            if (!speedupsInput) return;
+            const speedups = parseInt(speedupsInput.value || 0);
+            const gold = day.gold ? parseInt(document.getElementById(day.gold)?.value || 0) : 0;
+            const gold2 = day.gold2 ? parseInt(document.getElementById(day.gold2)?.value || 0) : 0;
+            const slots = JSON.parse(document.getElementById(day.slots).value || '[]');
+
+            if (speedups > 0 || gold > 0 || gold2 > 0) {
+                daysAttempted++;
+                if (slots.length === 0) daysInvalid.push(day.name);
+            }
+        });
+
+        if (daysAttempted === 0) {
+            e.preventDefault();
+            alert(window.t ? window.t('alert_resources_required') : 'Por favor introduce recursos para al menos un día del evento.');
+            return;
+        }
+
+        if (daysInvalid.length > 0) {
+            e.preventDefault();
+            alert((window.t ? window.t('alert_slots_required') : 'Debes seleccionar al menos una franja horaria para: ') + daysInvalid.join(', '));
+            return;
+        }
+    });
     </script>
 </body>
 </html>

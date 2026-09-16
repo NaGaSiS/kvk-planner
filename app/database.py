@@ -56,6 +56,8 @@ def init_db():
             player_id TEXT NOT NULL,
             avatar_url TEXT,
             backpack_url TEXT,
+            accelerators_url TEXT,
+            city_level INTEGER,
             alliance_name TEXT,
             resources REAL NOT NULL,
             raw_data TEXT NOT NULL,
@@ -66,7 +68,7 @@ def init_db():
         )
     """)
 
-    # Table exists (just created or already there), check if 'avatar_url' column exists
+    # Table exists (just created or already there), check if columns exist
     cursor.execute("PRAGMA table_info(submissions)")
     columns = [column[1] for column in cursor.fetchall()]
     if "avatar_url" not in columns:
@@ -83,6 +85,21 @@ def init_db():
         except sqlite3.OperationalError as e:
             if "duplicate column name" not in str(e):
                 raise
+
+    if "accelerators_url" not in columns:
+        try:
+            cursor.execute("ALTER TABLE submissions ADD COLUMN accelerators_url TEXT")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
+    if "city_level" not in columns:
+        try:
+            cursor.execute("ALTER TABLE submissions ADD COLUMN city_level INTEGER")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+
 
     # 3. Ensure 'assignments' table exists and has the correct schema
     cursor.execute("""

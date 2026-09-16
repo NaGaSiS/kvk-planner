@@ -7,6 +7,7 @@ import os
 import sqlite3
 import time
 import uuid
+import hmac
 from logging.handlers import RotatingFileHandler
 
 import markdown
@@ -14,10 +15,12 @@ from flask import (
     Flask,
     Response,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
     send_from_directory,
+    session,
     url_for,
 )
 from flask_wtf.csrf import CSRFProtect
@@ -26,6 +29,8 @@ from werkzeug.utils import secure_filename
 from config import Config
 
 from . import database, logic
+from . import image_analyzer
+from . import kingshot_scraper
 from .logic import format_minutes
 
 # Ensure .js files are served with the correct MIME type
@@ -101,6 +106,14 @@ def create_app():
             "ga_measurement_id": Config.GA_MEASUREMENT_ID,
         }
 
+    @app.template_filter("thousands")
+    def thousands_filter(value):
+        """Format a number with dot as thousands separator: 1234567 → 1.234.567"""
+        try:
+            return "{:,.0f}".format(float(value)).replace(",", ".")
+        except (TypeError, ValueError):
+            return value
+
     @app.after_request
     def add_security_headers(response):
         response.headers["X-Frame-Options"] = "DENY"
@@ -117,7 +130,24 @@ def create_app():
 
     @app.route("/")
     def index():
-        return render_template("index.html")
+        is_admin = session.get("is_admin", False)
+        return render_template("index.html", is_admin=is_admin)
+
+    @app.route("/admin/verify-pin", methods=["POST"])
+    def verify_admin_pin():
+        """Verifica el PIN del administrador y crea sesión."""
+        pin = request.form.get("pin", "").strip()
+        if pin == Config.ADMIN_PIN:
+            session["is_admin"] = True
+            session.permanent = True
+            return jsonify({"success": True})
+        return jsonify({"success": False, "error": "PIN incorrecto"}), 403
+
+    @app.route("/admin/logout", methods=["POST"])
+    def admin_logout():
+        """Cierra sesión de administrador."""
+        session.pop("is_admin", None)
+        return redirect(url_for("index"))
 
     @app.route("/guide")
     def guide():
@@ -150,7 +180,14 @@ def create_app():
 
     @app.route("/create", methods=["POST"])
     def create_event():
-        event_name = request.form["event_name"]
+        # Only admin can create events
+        if not session.get("is_admin", False):
+            return "Forbidden: Solo el administrador puede crear eventos.", 403
+
+        event_name = request.form.get("event_name", "").strip()
+        if not event_name:
+            return "El nombre del evento es requerido.", 400
+
         research_day = request.form.get("research_day", "5")
         try:
             slot_count = int(request.form.get("slot_count", "49"))
@@ -178,6 +215,10 @@ def create_app():
         )
         db.commit()
 
+        app.audit_logger.info(
+            f"ADMIN: Created event '{event_name}' with uid {uid}"
+        )
+
         return redirect(url_for("success", event_uid=uid, secret=admin_secret))
 
     @app.route("/success/<event_uid>")
@@ -199,8 +240,30 @@ def create_app():
             finalized_url=finalized_url,
         )
 
+    def _build_back_url(req, event_uid):
+        """Compute the 'back' URL for the calendar page based on ?ref= param."""
+        ref = req.args.get("ref", "home")
+        secret = req.args.get("secret", "")
+        player_id = req.args.get("player_id", "")
+        if ref == "admin" and secret:
+            return url_for("admin_dashboard", event_uid=event_uid) + f"?secret={secret}"
+        if ref == "player":
+            base = url_for("player_form", event_uid=event_uid)
+            return f"{base}?player_id={player_id}" if player_id else base
+        return url_for("index")
+
+    def _build_back_label(req):
+        ref = req.args.get("ref", "home")
+        labels = {
+            "admin": "← Panel de Admin",
+            "player": "← Mi Formulario",
+            "home": "← Inicio",
+        }
+        return labels.get(ref, "← Inicio")
+
     @app.route("/event/<event_uid>/finalized")
     def locked_appointments(event_uid):
+
         db = database.get_db()
         db.row_factory = sqlite3.Row
         event = db.execute(
@@ -259,7 +322,11 @@ def create_app():
             event=event_dict,
             active_days=active_days,
             assignments=all_assignments,
+            back_url=_build_back_url(request, event_uid),
+            back_label=_build_back_label(request),
+            back_ref=request.args.get("ref", "home"),
         )
+
 
     @app.route("/event/<event_uid>")
     def player_form(event_uid):
@@ -279,14 +346,165 @@ def create_app():
             "active_days": json.loads(event["active_days"]),
         }
 
-        return render_template("player_form.html", event=event_dict)
+        # Check for success message after submission
+        show_success = request.args.get("success") == "1"
+        player_id_prefill = request.args.get("player_id", "")
+
+        return render_template(
+            "player_form.html",
+            event=event_dict,
+            show_success=show_success,
+            player_id_prefill=player_id_prefill,
+        )
+
+    @app.route("/event/<event_uid>/lookup_player")
+    def lookup_player(event_uid):
+        """API para identificar un jugador por su ID y cargar datos previos."""
+        player_id = request.args.get("player_id", "").strip()
+        kingdom = request.args.get("kingdom", "").strip()
+
+        if not player_id or not player_id.isdigit():
+            return jsonify({"found": False, "error": "ID inválido"}), 400
+
+        # Kingdom is required for the external search; without it we can still
+        # check the local DB but cannot scrape kingshot.com.br reliably.
+        kingdom_missing = not kingdom or not kingdom.isdigit()
+
+        db = database.get_db()
+        db.row_factory = sqlite3.Row
+
+        # Check if event exists
+        event = db.execute(
+            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
+        ).fetchone()
+        if event is None:
+            return jsonify({"found": False, "error": "Evento no encontrado"}), 404
+
+        # Fetch all previous submissions for this player in this event
+        submissions_raw = db.execute(
+            "SELECT * FROM submissions WHERE event_uid = ? AND player_id = ?",
+            (event_uid, player_id),
+        ).fetchall()
+
+        if submissions_raw:
+            # Player found in local DB — kingdom not needed for this path
+            first_sub = dict(submissions_raw[0])
+            result = {
+                "found": True,
+                "player_id": player_id,
+                "player_name": first_sub["player_name"],
+                "avatar_url": first_sub["avatar_url"],
+                "city_level": first_sub["city_level"],
+                "city_label": f"TC {first_sub['city_level']}" if first_sub["city_level"] else None,
+                "alliance_name": first_sub["alliance_name"],
+                "kingdom": first_sub.get("kingdom"),
+                "source": "local_db",
+                "submissions": {},
+            }
+
+            for sub in submissions_raw:
+                day_type = sub["day_type"]
+                try:
+                    raw_data = json.loads(sub["raw_data"] or "{}")
+                except (json.JSONDecodeError, TypeError):
+                    raw_data = {}
+                try:
+                    feasible_slots = json.loads(sub["feasible_slots"] or "[]")
+                except (json.JSONDecodeError, TypeError):
+                    feasible_slots = []
+
+                result["submissions"][day_type] = {
+                    "raw_data": raw_data,
+                    "feasible_slots": feasible_slots,
+                    "status": sub["status"],
+                }
+
+            return jsonify(result)
+
+        # Player NOT in local DB — kingdom is required to scrape kingshot.com.br
+        if kingdom_missing:
+            return jsonify({
+                "found": False,
+                "requires_kingdom": True,
+                "player_id": player_id,
+                "error": "Kingdom number is required to search external profiles.",
+            })
+
+        scraped = kingshot_scraper.lookup_player(player_id, kingdom)
+
+        if scraped.get("found"):
+            return jsonify({
+                "found": True,
+                "player_id": player_id,
+                "player_name": scraped.get("player_name"),
+                "avatar_url": scraped.get("avatar_url"),
+                "city_level": scraped.get("city_level"),
+                "city_label": scraped.get("city_label"),
+                "alliance_name": scraped.get("alliance_name"),
+                "power": scraped.get("power"),
+                "kills": scraped.get("kills"),
+                "kingdom": scraped.get("kingdom"),
+                "source": "kingshot.com.br",
+                "submissions": {},
+            })
+
+        return jsonify({"found": False, "player_id": player_id})
+
+    @app.route("/event/<event_uid>/analyze_image", methods=["POST"])
+    def analyze_image(event_uid):
+        """API para analizar imágenes de mochila o aceleradores con IA."""
+        # Check event exists
+        db = database.get_db()
+        db.row_factory = sqlite3.Row
+        event = db.execute(
+            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
+        ).fetchone()
+        if event is None:
+            return jsonify({"success": False, "error": "Evento no encontrado"}), 404
+
+        image_type = request.form.get("type", "")  # 'backpack' or 'speedups'
+        if image_type not in ("backpack", "speedups"):
+            return jsonify({"success": False, "error": "Tipo de imagen inválido. Use 'backpack' o 'speedups'"}), 400
+
+        if "image" not in request.files:
+            return jsonify({"success": False, "error": "No se encontró el archivo de imagen"}), 400
+
+        file = request.files["image"]
+        if not file or not file.filename:
+            return jsonify({"success": False, "error": "Archivo vacío"}), 400
+
+        allowed_extensions = {"png", "jpg", "jpeg", "webp"}
+        extension = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if extension not in allowed_extensions:
+            return jsonify({"success": False, "error": "Tipo de archivo no válido"}), 400
+
+        image_bytes = file.read()
+        api_key = Config.GROQ_API_KEY
+
+        if image_type == "speedups":
+            result = image_analyzer.analyze_speedups_image(image_bytes, api_key)
+        else:
+            result = image_analyzer.analyze_backpack_image(image_bytes, api_key)
+
+        return jsonify(result)
 
     @app.route("/event/<event_uid>/submit", methods=["POST"])
     def submit(event_uid):
         db = database.get_db()
+        db.row_factory = sqlite3.Row
+
+        # Verify event exists
+        event = db.execute(
+            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
+        ).fetchone()
+        if event is None:
+            return "Event not found", 404
+
         player_id = request.form.get("player_id", "").strip()
         player_name = request.form.get("player_name", "").strip()
         alliance_name = request.form.get("alliance_name", "").strip()
+        city_level_str = request.form.get("city_level", "").strip()
+        city_level = int(city_level_str) if city_level_str.isdigit() else None
 
         # Server-side validation
         if not player_id.isdigit():
@@ -304,22 +522,34 @@ def create_app():
         if Config.ENABLE_SCREENSHOT_UPLOAD and "backpack_screenshot" in request.files:
             file = request.files["backpack_screenshot"]
             if file and file.filename:
-                # Security: Validate file extension
-                allowed_extensions = {"png", "jpg", "jpeg", "gif"}
+                allowed_extensions = {"png", "jpg", "jpeg", "gif", "webp"}
                 extension = file.filename.rsplit(".", 1)[-1].lower()
                 if extension not in allowed_extensions:
                     return "Invalid file type. Only images are allowed.", 400
-
-                # Create upload directory if it doesn't exist
                 upload_dir = os.path.join(app.static_folder, "uploads")
                 os.makedirs(upload_dir, exist_ok=True)
-
-                # Generate unique filename: event_uid + player_id + timestamp + original filename
                 filename = secure_filename(
-                    f"{event_uid}_{player_id}_{int(time.time())}_{file.filename}"
+                    f"{event_uid}_{player_id}_{int(time.time())}_backpack_{file.filename}"
                 )
                 file.save(os.path.join(upload_dir, filename))
                 backpack_url = url_for("static", filename=f"uploads/{filename}")
+
+        # Handle accelerators screenshot upload
+        accelerators_url = None
+        if Config.ENABLE_SCREENSHOT_UPLOAD and "accelerators_screenshot" in request.files:
+            file = request.files["accelerators_screenshot"]
+            if file and file.filename:
+                allowed_extensions = {"png", "jpg", "jpeg", "gif", "webp"}
+                extension = file.filename.rsplit(".", 1)[-1].lower()
+                if extension not in allowed_extensions:
+                    return "Invalid file type. Only images are allowed.", 400
+                upload_dir = os.path.join(app.static_folder, "uploads")
+                os.makedirs(upload_dir, exist_ok=True)
+                filename = secure_filename(
+                    f"{event_uid}_{player_id}_{int(time.time())}_accel_{file.filename}"
+                )
+                file.save(os.path.join(upload_dir, filename))
+                accelerators_url = url_for("static", filename=f"uploads/{filename}")
 
         # First, delete all previous submissions and assignments for this player and event.
         db.execute(
@@ -355,19 +585,11 @@ def create_app():
             }
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id,
-                    event_uid,
-                    day_type,
-                    player_name,
-                    player_id,
-                    avatar_url,
-                    backpack_url,
-                    alliance_name,
-                    score,
-                    json.dumps(raw_data),
-                    feasible_slots,
+                    submission_id, event_uid, day_type, player_name, player_id,
+                    avatar_url, backpack_url, accelerators_url, city_level,
+                    alliance_name, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
@@ -380,19 +602,11 @@ def create_app():
             raw_data = {"speedups": training_speedups}
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id,
-                    event_uid,
-                    day_type,
-                    player_name,
-                    player_id,
-                    avatar_url,
-                    backpack_url,
-                    alliance_name,
-                    score,
-                    json.dumps(raw_data),
-                    feasible_slots,
+                    submission_id, event_uid, day_type, player_name, player_id,
+                    avatar_url, backpack_url, accelerators_url, city_level,
+                    alliance_name, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
@@ -406,29 +620,20 @@ def create_app():
             raw_data = {"speedups": research_speedups, "truegold_dust": truegold_dust}
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id,
-                    event_uid,
-                    day_type,
-                    player_name,
-                    player_id,
-                    avatar_url,
-                    backpack_url,
-                    alliance_name,
-                    score,
-                    json.dumps(raw_data),
-                    feasible_slots,
+                    submission_id, event_uid, day_type, player_name, player_id,
+                    avatar_url, backpack_url, accelerators_url, city_level,
+                    alliance_name, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
         db.commit()
 
-        return redirect(url_for("submission_success"))
-
-    @app.route("/submission-success")
-    def submission_success():
-        return render_template("submission_success.html")
+        # Redirect back to the player form with success flag so they can view the calendar
+        return redirect(
+            url_for("player_form", event_uid=event_uid, success="1", player_id=player_id)
+        )
 
     @app.route("/admin/<event_uid>")
     def admin_dashboard(event_uid):
@@ -553,10 +758,10 @@ def create_app():
                                 f"Speedups: {format_minutes(raw_resources['speedups'])}"
                             )
                         if raw_resources.get("truegold"):
-                            parts.append(f"Truegold: {raw_resources['truegold']}")
+                            parts.append(f"Truegold: {int(raw_resources['truegold']):,}".replace(",", "."))
                         if raw_resources.get("tempered_truegold"):
                             parts.append(
-                                f"Tempered Gold: {raw_resources['tempered_truegold']}"
+                                f"Tempered Gold: {int(raw_resources['tempered_truegold']):,}".replace(",", ".")
                             )
                     elif day == "training":
                         if raw_resources.get("speedups"):
@@ -569,7 +774,7 @@ def create_app():
                                 f"Speedups: {format_minutes(raw_resources['speedups'])}"
                             )
                         if raw_resources.get("truegold_dust"):
-                            parts.append(f"Dust: {raw_resources['truegold_dust']}")
+                            parts.append(f"Dust: {int(raw_resources['truegold_dust']):,}".replace(",", "."))
                     sub["resources_text"] = (
                         " | ".join(parts) if parts else "No raw data"
                     )
@@ -1316,6 +1521,35 @@ def create_app():
             content = "".join(lines)
 
         return Response(content, mimetype="text/plain")
+
+    @app.route("/superadmin")
+    def superadmin():
+        import hmac as _hmac
+        secret_param = request.args.get("secret", "")
+        expected = app.config.get("SUPERADMIN_SECRET", "")
+
+        # First visit with ?secret=... — authenticate and redirect
+        if secret_param:
+            if expected and _hmac.compare_digest(secret_param, expected):
+                session["is_superadmin"] = True
+                return redirect(url_for("superadmin"))
+            return "Forbidden — wrong secret", 403
+
+        # Already authenticated
+        if not session.get("is_superadmin"):
+            return "Forbidden — not authenticated. Use /superadmin?secret=YOUR_SECRET", 403
+
+        from .logic import get_superadmin_metrics
+        from .database import get_db
+        time_range = request.args.get("range", "all")
+        db = get_db()
+        metrics = get_superadmin_metrics(db, time_range)
+        return render_template("superadmin.html", metrics=metrics, current_range=time_range)
+
+    @app.route("/superadmin/logout")
+    def superadmin_logout():
+        session.pop("is_superadmin", None)
+        return redirect(url_for("index"))
 
     return app
 

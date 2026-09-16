@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KingShot Kingdom Appointment Planner</title>
+    <title>KvK Appointment Planner – KingShot</title>
+    <meta name="description" content="Strategic KvK appointment coordination to maximize kingdom points during Kingdom vs Kingdom events.">
     {% include 'analytics.html' %}
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
     <script>
         tailwind.config = {
@@ -13,90 +17,336 @@
             theme: {
                 extend: {
                     colors: {
-                        'kvk-gold': '#FBBF24', // Amber-400
-                        'kvk-blue': '#3B82F6', // Blue-500
+                        'kvk-gold': '#FBBF24',
+                        'kvk-amber': '#F59E0B',
+                        'kvk-blue': '#3B82F6',
                         'kvk-gray': {
                             700: '#374151',
                             800: '#1F2937',
                             900: '#111827',
                         },
-                    }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
                 }
             }
         }
     </script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #111827 0%, #1a2332 40%, #0f1f15 100%);
+        }
+
+        .card-glow {
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.1), 0 4px 40px rgba(0,0,0,0.4);
+            transition: box-shadow 0.3s ease;
+        }
+        .card-glow:hover {
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3), 0 8px 50px rgba(0,0,0,0.5);
+        }
+
+        .gold-text {
+            background: linear-gradient(90deg, #FBBF24, #F59E0B, #D97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pin-input {
+            letter-spacing: 0.5em;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); }
+        }
+        .pulse-gold { animation: pulse-gold 2s infinite; }
+
+        .feature-card {
+            border: 1px solid rgba(251, 191, 36, 0.1);
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            border-color: rgba(251, 191, 36, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Modal */
+        #pin-modal {
+            backdrop-filter: blur(8px);
+        }
+    </style>
 </head>
-<body class="bg-kvk-gray-900 text-gray-200 antialiased">
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-        
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-kvk-gold">Kingdom Appointment Planner</h1>
-            <p class="text-lg text-gray-400 mt-2">KvK Coordination Tool</p>
+<body class="bg-kvk-gray-900 text-gray-200 antialiased hero-gradient min-h-screen">
+
+    <!-- Admin PIN Modal -->
+    <div id="pin-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-kvk-gray-800 rounded-2xl p-8 w-full max-w-sm border border-kvk-gray-700 card-glow fade-in">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-kvk-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-kvk-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-kvk-gold">Acceso Administrador</h2>
+                <p class="text-gray-400 text-sm mt-1">Introduce el PIN de administrador</p>
+            </div>
+            <form id="pin-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4">
+                    <input type="password" id="admin-pin" name="pin" maxlength="20"
+                        placeholder="••••••"
+                        class="pin-input w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-4 text-kvk-gold focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/30 transition-all">
+                </div>
+                <p id="pin-error" class="text-red-400 text-sm text-center mb-4 hidden">PIN incorrecto. Inténtalo de nuevo.</p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closePinModal()"
+                        class="flex-1 py-3 rounded-xl border border-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-700 transition font-medium">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 py-3 rounded-xl bg-kvk-gold text-kvk-gray-900 font-bold hover:bg-kvk-amber transition pulse-gold">
+                        Entrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+
+        <!-- Header -->
+        <header class="mb-12 pt-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="inline-flex items-center gap-2 bg-kvk-gold/10 border border-kvk-gold/20 rounded-full px-4 py-1">
+                    <span class="text-kvk-gold text-sm font-medium">⚔️ KvK Season 2025</span>
+                </div>
+                {% include 'lang_selector.html' %}
+            </div>
+            <div class="text-center">
+                <h1 class="text-5xl md:text-6xl font-extrabold mb-4">
+                    <span class="gold-text">Kingdom</span>
+                    <span class="text-white"> Appointment</span><br>
+                    <span class="text-white">Planner</span>
+                </h1>
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed" data-i18n="hero_sub">
+                    Coordinate <strong class="text-kvk-gold">King's Buff</strong> appointments optimally.
+                    Maximum score, minimum chaos.
+                </p>
+            </div>
         </header>
 
-        <div class="bg-kvk-gray-800 p-6 rounded-xl shadow-lg border border-kvk-gray-700 mb-10">
-            <h2 class="text-2xl font-bold text-gray-100 border-b border-kvk-gray-700 pb-3 mb-4">Introduction</h2>
-            <p class="text-gray-300 leading-relaxed">
-                Welcome, nobles of KingShot! This planner is our strategic weapon for dominating the Kingdom vs Kingdom event. By coordinating our use of the powerful King's Buff, we ensure our strongest players are active during the most critical moments.
-            </p>
-            <p class="text-gray-300 leading-relaxed mt-2">
-                Submit your resource levels and select all your available time slots for each event day. Leadership will use this data to build an optimal schedule that maximizes our kingdom's glory. Your participation is key to our victory!
-            </p>
-            <div class="mt-4">
-                <a href="{{ url_for('guide') }}" class="text-kvk-gold hover:text-amber-300 font-medium underline">Read the full User Guide & Tutorial &rarr;</a>
+        <!-- Feature Cards Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <div class="feature-card bg-kvk-gray-800/60 rounded-xl p-5">
+                <div class="text-2xl mb-3">🏆</div>
+                <h3 class="font-bold text-kvk-gold mb-1">Algoritmo Inteligente</h3>
+                <p class="text-gray-400 text-sm">Asignación automática priorizando recursos y disponibilidad horaria.</p>
+            </div>
+            <div class="feature-card bg-kvk-gray-800/60 rounded-xl p-5">
+                <div class="text-2xl mb-3">📸</div>
+                <h3 class="font-bold text-kvk-gold mb-1">Análisis con IA</h3>
+                <p class="text-gray-400 text-sm">Sube fotos de tu mochila y aceleradores. La IA extrae los datos automáticamente.</p>
+            </div>
+            <div class="feature-card bg-kvk-gray-800/60 rounded-xl p-5">
+                <div class="text-2xl mb-3">🔄</div>
+                <h3 class="font-bold text-kvk-gold mb-1">Actualizaciones</h3>
+                <p class="text-gray-400 text-sm">Los jugadores pueden actualizar sus datos en cualquier momento.</p>
             </div>
         </div>
 
-        <div class="bg-kvk-gray-800 p-6 rounded-xl shadow-lg border border-kvk-gray-700">
-            <h2 class="text-2xl font-bold text-gray-100 mb-4">Create a New Event</h2>
-            <form action="/create" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="mb-6">
-                    <label for="event_name" class="block text-sm font-medium text-gray-300 mb-1">Event Name</label>
-                    <input type="text" name="event_name" id="event_name" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md shadow-sm text-gray-200 focus:border-kvk-gold focus:ring focus:ring-kvk-gold focus:ring-opacity-50" placeholder="e.g., KvK Season 10">
-                </div>
-                
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Research Day</label>
-                    <div class="flex gap-4">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="research_day" value="2" class="form-radio text-kvk-gold focus:ring-kvk-gold bg-kvk-gray-700 border-kvk-gray-700" checked>
-                            <span class="ml-2 text-gray-300">Day 2</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="research_day" value="5" class="form-radio text-kvk-gold focus:ring-kvk-gold bg-kvk-gray-700 border-kvk-gray-700">
-                            <span class="ml-2 text-gray-300">Day 5</span>
-                        </label>
+        <!-- Main Content -->
+        <div class="bg-kvk-gray-800 rounded-2xl shadow-2xl border border-kvk-gray-700/50 card-glow overflow-hidden">
+
+            <!-- Intro Section -->
+            <div class="p-8 border-b border-kvk-gray-700">
+                <h2 class="text-2xl font-bold text-white mb-3">¡Bienvenidos, nobles de KingShot! 👑</h2>
+                <p class="text-gray-300 leading-relaxed mb-3">
+                    Esta herramienta coordina el uso del poderoso <strong class="text-kvk-gold">King's Buff</strong> durante el evento KvK.
+                    Envía tus recursos y selecciona tus franjas horarias disponibles para cada día del evento.
+                    El liderazgo usará estos datos para construir el calendario óptimo que maximice la gloria del reino.
+                </p>
+                <a href="{{ url_for('guide') }}" class="inline-flex items-center gap-2 text-kvk-gold hover:text-kvk-amber font-medium transition">
+                    Leer la guía completa
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Admin Section -->
+            <div class="p-8">
+                {% if is_admin %}
+                <!-- Admin is logged in - Show event creation form -->
+                <div class="mb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center gap-2 bg-green-900/30 border border-green-700/50 text-green-400 text-sm px-3 py-1 rounded-full">
+                            <span class="w-2 h-2 bg-green-400 rounded-full inline-block"></span>
+                            Modo Administrador Activo
+                        </span>
                     </div>
+                    <form action="{{ url_for('admin_logout') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-sm text-gray-500 hover:text-red-400 transition">
+                            Cerrar sesión
+                        </button>
+                    </form>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Appointment Slots</label>
-                    <div class="flex gap-4">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="slot_count" value="48" class="form-radio text-kvk-gold focus:ring-kvk-gold bg-kvk-gray-700 border-kvk-gray-700">
-                            <span class="ml-2 text-gray-300">48 Slots (On the hour/half-hour)</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="slot_count" value="49" class="form-radio text-kvk-gold focus:ring-kvk-gold bg-kvk-gray-700 border-kvk-gray-700" checked>
-                            <span class="ml-2 text-gray-300">49 Slots (Includes -15m offset)</span>
-                        </label>
-                    </div>
-                </div>
+                <h2 class="text-2xl font-bold text-white mb-6">Crear Nuevo Evento KvK</h2>
+                <form action="{{ url_for('create_event') }}" method="POST" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                
-                <button type="submit" class="w-full bg-kvk-gold text-kvk-gray-900 font-bold py-3 px-4 rounded-md hover:bg-amber-500 transition duration-300">Create Event</button>
-            </form>
+                    <div>
+                        <label for="event_name" class="block text-sm font-semibold text-gray-300 mb-2">
+                            Nombre del Evento
+                        </label>
+                        <input type="text" name="event_name" id="event_name" required
+                               class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-kvk-gold focus:ring-2 focus:ring-kvk-gold/20 transition-all"
+                               placeholder="ej. KvK Temporada 12">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-3">Día de Investigación</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="research_day" value="2"
+                                           class="w-4 h-4 text-kvk-gold bg-kvk-gray-900 border-kvk-gray-700 focus:ring-kvk-gold" checked>
+                                    <span class="text-gray-300">Día 2</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="research_day" value="5"
+                                           class="w-4 h-4 text-kvk-gold bg-kvk-gray-900 border-kvk-gray-700 focus:ring-kvk-gold">
+                                    <span class="text-gray-300">Día 5</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-300 mb-3">Franjas de Citas</label>
+                            <div class="flex flex-col gap-2">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="slot_count" value="48"
+                                           class="w-4 h-4 text-kvk-gold bg-kvk-gray-900 border-kvk-gray-700 focus:ring-kvk-gold">
+                                    <span class="text-gray-300 text-sm">48 franjas (en punto/media hora)</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="slot_count" value="49"
+                                           class="w-4 h-4 text-kvk-gold bg-kvk-gray-900 border-kvk-gray-700 focus:ring-kvk-gold" checked>
+                                    <span class="text-gray-300 text-sm">49 franjas (incluye offset -15m)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-kvk-gold text-kvk-gray-900 font-bold py-4 rounded-xl hover:bg-kvk-amber transition-all duration-300 text-lg transform hover:scale-[1.01]">
+                        ⚔️ Crear Evento KvK
+                    </button>
+                </form>
+
+                {% else %}
+                <!-- Public view - Admin access button only -->
+                <div class="text-center py-8">
+                    <div class="w-20 h-20 bg-kvk-gray-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-kvk-gray-700">
+                        <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-2">¿Buscas el formulario de tu evento?</h2>
+                    <p class="text-gray-400 mb-6 max-w-md mx-auto">
+                        El liderazgo del reino te compartirá el enlace directo al formulario de tu evento KvK.
+                        Si eres administrador, usa el acceso de abajo para crear un nuevo evento.
+                    </p>
+                    <button onclick="openPinModal()"
+                            class="inline-flex items-center gap-2 bg-kvk-gray-900 border border-kvk-gray-700 text-gray-400 hover:text-kvk-gold hover:border-kvk-gold/50 px-6 py-3 rounded-xl transition-all duration-300 font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Acceso Administrador
+                    </button>
+                </div>
+                {% endif %}
+            </div>
         </div>
 
-        <footer class="mt-12 pb-8 text-center">
-            <a href="https://github.com/prashmohan/kingdom-appt-planner" target="_blank" class="text-gray-500 hover:text-kvk-gold transition inline-block">
-                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 .297c-6.63 0-11.5 5.373-11.5 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.02-1.04-.032-2.043-3.197.69-3.872-1.542-3.872-1.542-.523-1.328-1.277-1.682-1.277-1.682-1.044-.714.079-.7.079-.7 1.154.08 1.761 1.186 1.761 1.186 1.026 1.756 2.99 1.248 3.718.954.103-.744.515-1.248.958-1.535-2.552-.29-5.232-1.276-5.232-5.676 0-1.253.448-2.277 1.182-3.078-.117-.29-.513-1.458.113-3.037 0 0 .96-.307 3.148 1.174.912-.254 1.89-.381 2.86-.386.97.005 1.948.132 2.86.386 2.186-1.481 3.145-1.174 3.145-1.174.628 1.579.232 2.747.115 3.037.736.801 1.18 1.825 1.18 3.078 0 4.41-2.685 5.383-5.242 5.666.413.354.78 1.053.78 2.122 0 1.532-.014 2.768-.014 3.143 0 .323.217.698.826.577C20.565 22.092 24 17.592 24 12.297c0-6.627-4.87-12-11.5-12z"/>
-                </svg>
-            </a>
+        <footer class="mt-10 pb-8 text-center text-gray-600 text-sm">
+            <p>Construido con ❤️ para la comunidad KingShot · Domina tu KvK ⚔️</p>
         </footer>
-
     </div>
+
+    <script>
+        function openPinModal() {
+            document.getElementById('pin-modal').classList.remove('hidden');
+            document.getElementById('pin-modal').classList.add('flex');
+            setTimeout(() => document.getElementById('admin-pin').focus(), 100);
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('flex');
+            document.getElementById('admin-pin').value = '';
+            document.getElementById('pin-error').classList.add('hidden');
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('pin-modal').addEventListener('click', function(e) {
+            if (e.target === this) closePinModal();
+        });
+
+        // Handle PIN form submission
+        document.getElementById('pin-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const pin = document.getElementById('admin-pin').value;
+            const csrfToken = this.querySelector('[name=csrf_token]').value;
+
+            try {
+                const formData = new FormData();
+                formData.append('pin', pin);
+                formData.append('csrf_token', csrfToken);
+
+                const response = await fetch('/admin/verify-pin', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload page to show admin form
+                    window.location.reload();
+                } else {
+                    document.getElementById('pin-error').classList.remove('hidden');
+                    document.getElementById('admin-pin').value = '';
+                    document.getElementById('admin-pin').focus();
+                    // Shake animation
+                    document.getElementById('admin-pin').style.animation = 'none';
+                    setTimeout(() => {
+                        document.getElementById('admin-pin').style.animation = '';
+                    }, 10);
+                }
+            } catch (err) {
+                document.getElementById('pin-error').classList.remove('hidden');
+            }
+        });
+
+        // ESC to close modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePinModal();
+        });
+    </script>
 </body>
 </html>

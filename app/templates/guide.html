@@ -6,6 +6,7 @@
     <title>User Guide - KingShot Planner</title>
     {% include 'analytics.html' %}
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
     <script>
         tailwind.config = {
@@ -49,10 +50,11 @@
 <body class="bg-kvk-gray-900 text-gray-200 antialiased">
     <div class="container mx-auto p-4 md:p-8 max-w-4xl">
         
-        <div class="mb-6">
+        <div class="mb-6 flex justify-between items-center">
             <a href="{{ url_for('index') }}" class="text-kvk-gold hover:text-amber-300 transition flex items-center gap-2">
-                <span>← Back to Home</span>
+                <span data-i18n="back_home">← Back to Home</span>
             </a>
+            {% include 'lang_selector.html' %}
         </div>
 
         <div class="bg-kvk-gray-800 p-8 md:p-12 rounded-xl shadow-lg border border-kvk-gray-700">
@@ -61,12 +63,12 @@
             </div>
         </div>
 
-        <div class="text-center mt-10 text-gray-500 text-sm">
+        <div class="text-center mt-10 text-gray-500 text-sm" data-i18n="guide_footer">
             Kingdom Appointment Planner User Guide
         </div>
 
         <footer class="mt-12 pb-8 text-center border-t border-kvk-gray-700 pt-8">
-            <a href="https://github.com/prashmohan/kingdom-appt-planner" target="_blank" class="text-gray-500 hover:text-kvk-gold transition inline-block">
+            <a href="https://github.com/IsmaelRobledo" target="_blank" class="text-gray-500 hover:text-kvk-gold transition inline-block">
                 <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 .297c-6.63 0-11.5 5.373-11.5 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.02-1.04-.032-2.043-3.197.69-3.872-1.542-3.872-1.542-.523-1.328-1.277-1.682-1.277-1.682-1.044-.714.079-.7.079-.7 1.154.08 1.761 1.186 1.761 1.186 1.026 1.756 2.99 1.248 3.718.954.103-.744.515-1.248.958-1.535-2.552-.29-5.232-1.276-5.232-5.676 0-1.253.448-2.277 1.182-3.078-.117-.29-.513-1.458.113-3.037 0 0 .96-.307 3.148 1.174.912-.254 1.89-.381 2.86-.386.97.005 1.948.132 2.86.386 2.186-1.481 3.145-1.174 3.145-1.174.628 1.579.232 2.747.115 3.037.736.801 1.18 1.825 1.18 3.078 0 4.41-2.685 5.383-5.242 5.666.413.354.78 1.053.78 2.122 0 1.532-.014 2.768-.014 3.143 0 .323.217.698.826.577C20.565 22.092 24 17.592 24 12.297c0-6.627-4.87-12-11.5-12z"/>
                 </svg>

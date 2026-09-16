@@ -172,3 +172,97 @@ def format_minutes(total_minutes):
     if minutes > 0 or not parts:
         parts.append(f"{minutes}m")
     return " ".join(parts)
+
+
+def get_superadmin_metrics(db, time_range: str = "all") -> dict:
+    """Computes global KPIs across all registered events."""
+    valid_range = time_range if time_range in ("1w", "2w", "4w") else "all"
+    time_filters = {"1w": "-7 days", "2w": "-14 days", "4w": "-28 days"}
+
+    if valid_range in time_filters:
+        events_rows = db.execute(
+            "SELECT uid, name, active_days, admin_secret, slot_count, created_at "
+            "FROM events WHERE created_at >= datetime('now', ?) ORDER BY created_at DESC",
+            (time_filters[valid_range],)
+        ).fetchall()
+    else:
+        events_rows = db.execute(
+            "SELECT uid, name, active_days, admin_secret, slot_count, created_at "
+            "FROM events ORDER BY created_at DESC"
+        ).fetchall()
+
+    events = [
+        {"uid": r[0], "name": r[1], "active_days": r[2],
+         "admin_secret": r[3], "slot_count": r[4], "created_at": r[5]}
+        for r in events_rows
+    ]
+
+    if not events:
+        return {
+            "time_range": valid_range, "total_events": 0,
+            "total_submissions": 0, "total_unique_players": 0,
+            "total_alliances": 0, "total_kingdoms": 0,
+            "total_assigned_slots": 0, "avg_submissions_per_event": 0.0,
+            "events": [],
+        }
+
+    # Fetch all submissions
+    if valid_range in time_filters:
+        subs = db.execute(
+            "SELECT s.event_uid, s.day_type, s.player_name, s.player_id, "
+            "s.alliance_name, s.resources, s.status "
+            "FROM submissions s JOIN events e ON s.event_uid = e.uid "
+            "WHERE e.created_at >= datetime('now', ?)",
+            (time_filters[valid_range],)
+        ).fetchall()
+        assigns = db.execute(
+            "SELECT a.event_uid FROM assignments a JOIN events e ON a.event_uid = e.uid "
+            "WHERE e.created_at >= datetime('now', ?) AND a.player_id IS NOT NULL",
+            (time_filters[valid_range],)
+        ).fetchall()
+    else:
+        subs = db.execute(
+            "SELECT event_uid, day_type, player_name, player_id, "
+            "alliance_name, resources, status FROM submissions"
+        ).fetchall()
+        assigns = db.execute(
+            "SELECT event_uid FROM assignments WHERE player_id IS NOT NULL"
+        ).fetchall()
+
+    unique_players = {r[3] for r in subs}
+    unique_alliances = {r[4] for r in subs if r[4]}
+    # kingdoms: parse from raw_data not available here, use empty set
+    total_subs = len(subs)
+    total_assigned = len(assigns)
+
+    # Per-event stats
+    event_stats = {}
+    for ev in events:
+        event_stats[ev["uid"]] = {
+            **ev,
+            "submission_count": 0,
+            "assigned_count": 0,
+            "total_resources": 0.0,
+        }
+    for s in subs:
+        uid = s[0]
+        if uid in event_stats:
+            event_stats[uid]["submission_count"] += 1
+            event_stats[uid]["total_resources"] += s[5] or 0
+    for a in assigns:
+        uid = a[0]
+        if uid in event_stats:
+            event_stats[uid]["assigned_count"] += 1
+
+    events_list = sorted(event_stats.values(), key=lambda x: x["created_at"], reverse=True)
+
+    return {
+        "time_range": valid_range,
+        "total_events": len(events),
+        "total_submissions": total_subs,
+        "total_unique_players": len(unique_players),
+        "total_alliances": len(unique_alliances),
+        "total_assigned_slots": total_assigned,
+        "avg_submissions_per_event": round(total_subs / len(events), 1) if events else 0.0,
+        "events": events_list,
+    }

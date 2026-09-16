@@ -2,11 +2,7 @@
 
 ### *Maximize your Kingdom's Glory with Strategic Buff Management*
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-ready-cyan.svg)](https://www.docker.com/)
-
-In the high-stakes world of **Kingdom vs Kingdom (KvK)**, timing isn't just everything—it's the *only* thing. The **Kingdom Appointment Planner** is a specialized strategic tool designed to synchronize your strongest players with the kingdom's "King's Buffs," ensuring every second of that 30-minute window translates into maximum points.
+In the high-stakes world of **Kingdom vs Kingdom (KvK)**, timing isn't just everything—it's the *only* thing. This strategic scheduling tool synchronizes your strongest players with the kingdom's "King's Buffs," ensuring every second of that 30-minute window translates into maximum points.
 
 ![Kingdom Appointment Planner Landing Page](app/static/images/landing_page.png)
 
@@ -89,34 +85,6 @@ Click **Assign Appointments**. The system will fill the slots, prioritizing play
 
 ### Step 4: Go Live!
 Share the **Finalized Schedule URL**. It's read-only and always reflects your latest locked/assigned appointments.
-
----
-
-## 🚀 Quick Start (Docker)
-
-The application is fully containerized for a one-command deployment.
-
-*   **Clone the Repository:**
-```bash
-git clone https://github.com/prashmohan/kingdom-appt-planner.git
-cd kingdom-appt-planner
-```
-
-*   **Launch with Docker Compose:**
-```bash
-docker-compose up --build -d
-```
-
-*   **Access the App:** Open your browser to `http://localhost:12348`.
-
----
-
-## 💾 Maintenance & Backups
-
-Keep your data safe with our included utility script:
-
-*   **Backup:** `./scripts/db_util.sh backup`
-*   **Restore:** `./scripts/db_util.sh restore backups/planner_backup_TIMESTAMP.db`
 
 ---
 

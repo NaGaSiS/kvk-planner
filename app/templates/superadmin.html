@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superadmin Console - Kingdom Appointment Planner</title>
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fbf9eb',
+                            100: '#f6f0ce',
+                            200: '#efe09c',
+                            300: '#e7c963',
+                            400: '#dfaf32',
+                            500: '#d7941b',
+                            600: '#bb7213',
+                            700: '#955013',
+                            800: '#7d4117',
+                            900: '#6b3617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="{{ url_for('index') }}" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </a>
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-brand-400">⚡</span> <span data-i18n="superadmin_title">Superadmin Console</span>
+                </h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                {% include 'lang_selector.html' %}
+                <a href="{{ url_for('superadmin_logout') }}" class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                    Logout
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Time Range Filter -->
+        <div class="flex justify-center">
+            <div class="inline-flex glass-panel p-1 rounded-lg">
+                {% set ranges = [('all', 'All Time'), ('1w', 'Last 7 Days'), ('2w', 'Last 14 Days'), ('4w', 'Last 28 Days')] %}
+                {% for val, label in ranges %}
+                <a href="?range={{ val }}" 
+                   class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if current_range == val %}bg-brand-500 text-white shadow-lg{% else %}text-gray-400 hover:text-white hover:bg-gray-800{% endif %}">
+                    {{ label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-brand-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_total_events">Total Events</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.total_events }}</p>
+            </div>
+            
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_total_submissions">Total Submissions</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.total_submissions }}</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_unique_players">Unique Players</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.total_unique_players }}</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_unique_alliances">Unique Alliances</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.total_alliances }}</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_assigned_slots">Assigned Slots</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.total_assigned_slots }}</p>
+            </div>
+
+            <div class="glass-panel p-6 rounded-xl text-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p class="text-sm text-gray-400 mb-1" data-i18n="sa_avg_subs">Avg Subs/Event</p>
+                <p class="text-3xl font-bold text-white">{{ metrics.avg_submissions_per_event }}</p>
+            </div>
+        </div>
+
+        <!-- Events Table -->
+        <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-gray-800 bg-gray-900/50">
+                <h2 class="text-lg font-medium text-white" data-i18n="sa_event_registry">Event Registry</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-800">
+                    <thead class="bg-gray-900/30">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_event">Event Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_created">Created At</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_days">Active Days</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_subs">Submissions</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_assigned">Assigned</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_fill">Fill Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        {% for ev in metrics.events %}
+                        <tr class="hover:bg-gray-800/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="{{ url_for('admin_dashboard', event_uid=ev.uid) }}?secret={{ ev.admin_secret }}" class="text-brand-400 hover:text-brand-300 font-medium flex items-center gap-2">
+                                    {{ ev.name }}
+                                    <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </a>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <span class="text-xs text-gray-500 font-mono">{{ ev.uid[:8] }}...</span>
+                                    <a href="{{ url_for('player_form', event_uid=ev.uid) }}" target="_blank" class="text-xs text-gray-500 hover:text-gray-300 transition-colors" data-i18n="sa_player_form">Player Form ↗</a>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                {{ ev.created_at }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex gap-1">
+                                    {% if 'construction": true' in ev.active_days|lower %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">Const</span>
+                                    {% endif %}
+                                    {% if 'training": true' in ev.active_days|lower %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">Train</span>
+                                    {% endif %}
+                                    {% if 'research": true' in ev.active_days|lower %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Rsch</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 text-right">
+                                {{ ev.submission_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 text-right">
+                                {{ ev.assigned_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                {% if ev.submission_count > 0 %}
+                                    {% set fill_rate = (ev.assigned_count / ev.submission_count * 100)|round(1) %}
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-sm {% if fill_rate >= 80 %}text-green-400{% elif fill_rate >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                                            {{ fill_rate }}%
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-sm text-gray-500">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500" data-i18n="sa_no_events">
+                                No events found for the selected time range.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
