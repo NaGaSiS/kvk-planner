@@ -1,4 +1,4 @@
-"""
+﻿"""
 image_analyzer.py
 Módulo de análisis de imágenes del juego KingShot mediante Groq Vision API (GRATIS).
 Modelo: qwen/qwen3.6-27b  (con capacidad de visión)
@@ -123,7 +123,7 @@ def _call_groq_vision(image_bytes: bytes, prompt: str, api_key: str, max_retries
     Usa qwen3.8-27b con /no_think para obtener JSON limpio sin bloques de razonamiento.
     Reintenta automáticamente si el modelo devuelve respuesta vacía.
     """
-    import groq  # noqa: PLC0415
+    import groq
 
     client = groq.Groq(api_key=api_key)
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -157,7 +157,7 @@ def _call_groq_vision(image_bytes: bytes, prompt: str, api_key: str, max_retries
                 return text
             logger.warning("Groq returned empty response on attempt %d, retrying...", attempt + 1)
             last_error = ValueError("Empty response from model")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_error = e
             logger.warning("Groq call failed on attempt %d: %s", attempt + 1, e)
 
@@ -207,7 +207,7 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
             "healing": _parse_time_to_minutes(data.get("healing_speedup", "0")),
             "confidence": float(data.get("confidence", 0.8)),
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception("Error analizando imagen de aceleradores con Groq")
         return {
             "success": False,
@@ -258,7 +258,7 @@ def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
             "confidence": float(data.get("confidence", 0.8)),
             "notes": data.get("notes", ""),
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception("Error analizando imagen de mochila con Groq")
         return {
             "success": False,

@@ -1,0 +1,17 @@
+﻿# Ruff configuration for KvK Planner
+line-length = 120
+
+[lint]
+# BLE001: broad exception catch - acceptable when using logger.exception()
+# S110: try-except-pass - acceptable in initialization code
+# S104: bind to all interfaces - needed for gunicorn in Docker
+ignore = ["BLE001", "S110", "S104", "PLC0415"]
+
+# Files/folders to exclude
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+]
