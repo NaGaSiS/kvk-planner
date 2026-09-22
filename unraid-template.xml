@@ -1,0 +1,159 @@
+﻿<?xml version="1.0"?>
+<Container version="2">
+  <Name>KvK-Planner</Name>
+
+  <!-- REEMPLAZA "NaGaSiS" con tu usuario de GitHub -->
+  <Repository>ghcr.io/NaGaSiS/kvk-planner:latest</Repository>
+  <Registry>https://ghcr.io</Registry>
+
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+
+  <Support>https://github.com/NaGaSiS/kvk-planner</Support>
+  <Project>https://github.com/NaGaSiS/kvk-planner</Project>
+
+  <Overview>
+    KvK Appointment Planner — Herramienta de coordinacion para KingShot (Kingdom vs Kingdom).
+    Permite a los jugadores registrar recursos y disponibilidad horaria, y al admin asignar
+    citas de buff optimas. Incluye analisis de imagenes con IA, soporte multiidioma y
+    consola de superadmin.
+
+    Directorios:
+    /app/data : Base de datos SQLite (persistente)
+    /app/app/static/uploads : Imagenes subidas por jugadores (persistente)
+    /app/logs : Logs de la aplicacion (persistente)
+
+    Variables obligatorias:
+    SECRET_KEY : Clave secreta Flask (genera una aleatoria)
+    ADMIN_PIN : PIN de acceso al panel de administrador
+    SUPERADMIN_SECRET : Token para el panel superadmin (/superadmin?secret=...)
+    GEMINI_API_KEY : API key de Google Gemini para analisis de imagenes (opcional)
+  </Overview>
+
+  <Category>Tools:</Category>
+  <WebUI>http://[IP]:[PORT:12348]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/NaGaSiS/kvk-planner/master/app/static/favicon.svg</Icon>
+
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+
+  <!-- === PUERTOS === -->
+  <Config Name="Web UI Port"
+          Target="5000"
+          Default="12348"
+          Mode="tcp"
+          Description="Puerto de acceso a la aplicacion web"
+          Type="Port"
+          Display="always"
+          Required="true"
+          Mask="false">12348</Config>
+
+  <!-- === RUTAS === -->
+  <Config Name="Data Path (Base de datos)"
+          Target="/app/data"
+          Default="/mnt/user/appdata/kvk-planner/data"
+          Mode="rw"
+          Description="Carpeta donde se almacena la base de datos SQLite. IMPORTANTE: haz backup de esta carpeta."
+          Type="Path"
+          Display="always"
+          Required="true"
+          Mask="false">/mnt/user/appdata/kvk-planner/data</Config>
+
+  <Config Name="Uploads Path (Imagenes jugadores)"
+          Target="/app/app/static/uploads"
+          Default="/mnt/user/appdata/kvk-planner/uploads"
+          Mode="rw"
+          Description="Carpeta donde se almacenan las capturas de pantalla subidas por los jugadores."
+          Type="Path"
+          Display="always"
+          Required="true"
+          Mask="false">/mnt/user/appdata/kvk-planner/uploads</Config>
+
+  <Config Name="Logs Path"
+          Target="/app/logs"
+          Default="/mnt/user/appdata/kvk-planner/logs"
+          Mode="rw"
+          Description="Carpeta de logs de la aplicacion."
+          Type="Path"
+          Display="advanced"
+          Required="false"
+          Mask="false">/mnt/user/appdata/kvk-planner/logs</Config>
+
+  <!-- === VARIABLES DE ENTORNO (SEGURIDAD) === -->
+  <Config Name="SECRET_KEY"
+          Target="SECRET_KEY"
+          Default="change-me-to-random-string"
+          Mode=""
+          Description="Clave secreta para sesiones Flask. Cambiala por una cadena aleatoria larga."
+          Type="Variable"
+          Display="always"
+          Required="true"
+          Mask="true">change-me-to-random-string</Config>
+
+  <Config Name="ADMIN_PIN"
+          Target="ADMIN_PIN"
+          Default="kvk2025"
+          Mode=""
+          Description="PIN de acceso al panel de administrador de cada evento."
+          Type="Variable"
+          Display="always"
+          Required="true"
+          Mask="true">kvk2025</Config>
+
+  <Config Name="SUPERADMIN_SECRET"
+          Target="SUPERADMIN_SECRET"
+          Default=""
+          Mode=""
+          Description="Token secreto para acceder a /superadmin?secret=TU_TOKEN. Dejalo vacio para deshabilitar."
+          Type="Variable"
+          Display="always"
+          Required="false"
+          Mask="true"></Config>
+
+  <!-- === VARIABLES DE ENTORNO (IA) === -->
+  <Config Name="GEMINI_API_KEY"
+          Target="GEMINI_API_KEY"
+          Default=""
+          Mode=""
+          Description="API Key de Google Gemini para analisis automatico de imagenes. Obtenla en https://aistudio.google.com/apikey"
+          Type="Variable"
+          Display="always"
+          Required="false"
+          Mask="true"></Config>
+
+  <Config Name="GROQ_API_KEY"
+          Target="GROQ_API_KEY"
+          Default=""
+          Mode=""
+          Description="API Key de Groq (alternativa gratuita a Gemini para analisis de imagenes). Obtenla en https://console.groq.com"
+          Type="Variable"
+          Display="always"
+          Required="false"
+          Mask="true"></Config>
+
+  <!-- === VARIABLES DE ENTORNO (OPCIONALES) === -->
+  <Config Name="ENABLE_SCREENSHOT_UPLOAD"
+          Target="ENABLE_SCREENSHOT_UPLOAD"
+          Default="true"
+          Mode=""
+          Description="Activa o desactiva la subida de capturas de pantalla por parte de los jugadores."
+          Type="Variable"
+          Display="advanced"
+          Required="false"
+          Mask="false">true</Config>
+
+  <Config Name="DATABASE_PATH"
+          Target="DATABASE_PATH"
+          Default="/app/data/planner.db"
+          Mode=""
+          Description="Ruta interna a la base de datos. No cambiar salvo que sepas lo que haces."
+          Type="Variable"
+          Display="advanced-hide"
+          Required="true"
+          Mask="false">/app/data/planner.db</Config>
+</Container>

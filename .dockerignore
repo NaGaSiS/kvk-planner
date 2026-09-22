@@ -1,0 +1,44 @@
+﻿# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment secrets (NEVER baked into image)
+.env
+.env.local
+.env.production
+
+# Git history
+.git/
+.gitignore
+
+# Tests and CI
+tests/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Dev tools
+.ruff_cache/
+
+# Logs
+logs/
+*.log
+
+# Backups and data (mounted as volumes)
+backups/
+data/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/

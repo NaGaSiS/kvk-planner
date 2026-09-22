@@ -1,18 +1,44 @@
-version: '2.4'
+version: '3.8'
+
 services:
   web:
     build: .
+    image: kvk-planner:latest
+    container_name: kvk-planner
     restart: unless-stopped
     ports:
-      - "12348:5000"
+      - "${HOST_PORT:-12348}:5000"
+
+    # Mount persistent data outside the container
     volumes:
-      - planner_data:/app/data
-      - planner_uploads:/app/app/static/uploads
+      - ${DATA_PATH:-./data}:/app/data
+      - ${UPLOADS_PATH:-./uploads}:/app/app/static/uploads
+      - ${LOGS_PATH:-./logs}:/app/logs
+
+    # Load secrets from .env file (NOT committed to git)
+    env_file:
+      - .env
+
+    # Override / default environment variables
     environment:
       - DATABASE_PATH=/app/data/planner.db
+      - PYTHONUNBUFFERED=1
+
+    # DNS for the kingshot.com.br scraper and Gemini API calls
     dns:
       - 8.8.8.8
       - 1.1.1.1
-volumes:
-  planner_data:
-  planner_uploads:
+
+    # Health check (Unraid shows container status)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Unraid Community Applications labels
+    labels:
+      - "net.unraid.docker.managed=composeman"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:12348]/"
+      - "net.unraid.docker.icon=https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/flask.png"
