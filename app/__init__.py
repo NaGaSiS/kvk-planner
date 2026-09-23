@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import io
 import json
 import logging
@@ -97,7 +97,7 @@ def create_app():
                 ).fetchone()
                 if row and row[0] is not None:
                     slot_count = row[0]
-        except (RuntimeError, Exception):  # noqa: BLE001, S110
+        except (RuntimeError, Exception):
             pass
 
         return {
@@ -1101,7 +1101,7 @@ def create_app():
 
         try:
             data = json.load(file)
-        except Exception:  # noqa: BLE001
+        except Exception:
             flash("Invalid file format. Please upload a valid JSON file.", "error")
             return redirect(
                 url_for("admin_dashboard", event_uid=event_uid, secret=secret)
@@ -1154,7 +1154,7 @@ def create_app():
             if isinstance(fs_val, str):
                 try:
                     fs_val = json.loads(fs_val)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     flash("feasible_slots must be a list.", "error")
                     return redirect(
                         url_for("admin_dashboard", event_uid=event_uid, secret=secret)
@@ -1178,7 +1178,7 @@ def create_app():
             if isinstance(rd_val, str):
                 try:
                     rd_val = json.loads(rd_val)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     flash("raw_data must be a JSON object.", "error")
                     return redirect(
                         url_for("admin_dashboard", event_uid=event_uid, secret=secret)
