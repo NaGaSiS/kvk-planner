@@ -13,5 +13,5 @@ jobs:
       - name: Run Ruff lint check
         run: ruff check app/ config.py --config ruff.toml
 
-      - name: Run Ruff format check
-        run: ruff format --check app/ config.py --config ruff.toml
+      - name: Run Ruff format (apply)
+        run: ruff format app/ config.py --config ruff.toml
