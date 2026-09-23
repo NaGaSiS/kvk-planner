@@ -1,5 +1,4 @@
 import csv
-import hmac
 import io
 import json
 import logging
@@ -30,7 +29,6 @@ from config import Config
 
 from . import database, image_analyzer, kingshot_scraper, logic
 from .logic import format_minutes
-
 
 # Ensure .js files are served with the correct MIME type
 mimetypes.add_type("application/javascript", ".js")
