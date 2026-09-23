@@ -1,4 +1,5 @@
-﻿import csv
+import csv
+import hmac
 import io
 import json
 import logging
@@ -7,7 +8,6 @@ import os
 import sqlite3
 import time
 import uuid
-import hmac
 from logging.handlers import RotatingFileHandler
 
 import markdown
@@ -28,10 +28,9 @@ from werkzeug.utils import secure_filename
 
 from config import Config
 
-from . import database, logic
-from . import image_analyzer
-from . import kingshot_scraper
+from . import database, image_analyzer, kingshot_scraper, logic
 from .logic import format_minutes
+
 
 # Ensure .js files are served with the correct MIME type
 mimetypes.add_type("application/javascript", ".js")
@@ -110,7 +109,7 @@ def create_app():
     def thousands_filter(value):
         """Format a number with dot as thousands separator: 1234567 → 1.234.567"""
         try:
-            return "{:,.0f}".format(float(value)).replace(",", ".")
+            return f"{float(value):,.0f}".replace(",", ".")
         except (TypeError, ValueError):
             return value
 
@@ -1539,8 +1538,8 @@ def create_app():
         if not session.get("is_superadmin"):
             return "Forbidden — not authenticated. Use /superadmin?secret=YOUR_SECRET", 403
 
-        from .logic import get_superadmin_metrics
         from .database import get_db
+        from .logic import get_superadmin_metrics
         time_range = request.args.get("range", "all")
         db = get_db()
         metrics = get_superadmin_metrics(db, time_range)
