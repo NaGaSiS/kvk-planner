@@ -96,6 +96,20 @@
 <body class="bg-kvk-gray-900 text-gray-200 antialiased">
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="inline-flex items-center gap-2 bg-kvk-gold/10 border border-kvk-gold/20 rounded-full px-4 py-1">
+                    <span class="text-kvk-gold text-sm font-medium">⚔️ {{ event.name }}</span>
+                </div>
+                {% include 'lang_selector.html' %}
+            </div>
+            <div class="text-center">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-kvk-gold mb-2" data-i18n="page_title">Player Form</h1>
+                <p class="text-gray-400" data-i18n="page_subtitle">Enter your resources to participate in KvK appointment assignment</p>
+            </div>
+        </header>
+
         <!-- Success Banner -->
         {% if show_success %}
         <div class="success-banner mb-6 bg-green-900/30 border border-green-700/50 rounded-xl p-5 flex items-center justify-between">
@@ -117,19 +131,6 @@
         </div>
         {% endif %}
 
-        <!-- Header -->
-        <header class="mb-8">
-            <div class="flex items-center justify-between mb-4">
-                <div class="inline-flex items-center gap-2 bg-kvk-gold/10 border border-kvk-gold/20 rounded-full px-4 py-1">
-                    <span class="text-kvk-gold text-sm font-medium">⚔️ {{ event.name }}</span>
-                </div>
-                {% include 'lang_selector.html' %}
-            </div>
-            <div class="text-center">
-                <h1 class="text-4xl md:text-5xl font-extrabold text-kvk-gold mb-2" data-i18n="page_title">Player Form</h1>
-                <p class="text-gray-400" data-i18n="page_subtitle">Enter your resources to participate in KvK appointment assignment</p>
-            </div>
-        </header>
 
         {% if not show_success %}
         <form id="main-form" action="/event/{{ event.uid }}/submit" method="POST" enctype="multipart/form-data"
