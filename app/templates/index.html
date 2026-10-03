@@ -326,8 +326,12 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Reload page to show admin form
-                    window.location.reload();
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        // Reload page to show admin form
+                        window.location.reload();
+                    }
                 } else {
                     document.getElementById('pin-error').classList.remove('hidden');
                     document.getElementById('admin-pin').value = '';
