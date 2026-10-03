@@ -205,7 +205,7 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
         if "error" in data and data["error"] == "wrong_screen":
             return {
                 "success": False,
-                "error": "Por favor, pulsa el icono 📊 (arriba a la derecha en el juego) y sube la captura del 'Resumen de Aceleradores', no la cuadrícula de la mochila.",
+                "error": "wrong_screen_error",
                 "general": 0, "construction": 0, "training": 0, "research": 0, "healing": 0,
                 "confidence": 0,
             }

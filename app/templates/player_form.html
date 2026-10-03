@@ -1099,7 +1099,11 @@
             resultEl.classList.remove('hidden');
 
             if (!data.success) {
-                contentEl.innerHTML = `<p class="text-red-400">❌ ${data.error || (window.t ? window.t('error_analyzing') : 'Error al analizar la imagen')}</p>`;
+                let errorMsg = data.error || (window.t ? window.t('error_analyzing') : 'Error al analizar la imagen');
+                if (data.error === "wrong_screen_error") {
+                    errorMsg = window.t ? window.t('error_wrong_screen') : 'Wrong screen uploaded.';
+                }
+                contentEl.innerHTML = `<p class="text-red-400">❌ ${errorMsg}</p>`;
                 if (data.error && data.error.includes('API key')) {
                     contentEl.innerHTML += `<p class="text-gray-500 text-xs mt-2">${window.t ? window.t('configure_api_key') : 'Configura GEMINI_API_KEY en el archivo .env para habilitar el análisis automático.'}</p>`;
                 }
