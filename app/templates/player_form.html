@@ -112,8 +112,8 @@
 
         <!-- Success Banner -->
         {% if show_success %}
-        <div class="success-banner mb-6 bg-green-900/30 border border-green-700/50 rounded-xl p-5 flex items-center justify-between">
-            <div class="flex items-center gap-4">
+        <div class="success-banner mb-6 bg-green-900/30 border border-green-700/50 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6">
+            <div class="flex items-start md:items-center gap-4">
                 <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -125,7 +125,7 @@
                 </div>
             </div>
             <a href="{{ url_for('locked_appointments', event_uid=event.uid) }}"
-               class="ml-4 flex-shrink-0 inline-flex items-center gap-2 bg-kvk-gold text-kvk-gray-900 font-bold px-5 py-2.5 rounded-xl hover:bg-kvk-amber transition text-sm">
+               class="w-full md:w-auto flex-shrink-0 inline-flex items-center justify-center gap-2 bg-kvk-gold text-kvk-gray-900 font-bold px-5 py-2.5 rounded-xl hover:bg-kvk-amber transition text-sm">
                 <span data-i18n="btn_view_calendar">📅 Ver Calendario</span>
             </a>
         </div>
@@ -397,7 +397,7 @@
 
                 {% if event.active_days.construction %}
                 <!-- Construction Day -->
-                <div class="bg-kvk-gray-800 rounded-2xl border border-amber-500/20 overflow-hidden">
+                <div class="bg-kvk-gray-800 rounded-2xl border border-amber-500/20 overflow-hidden order-1 flex flex-col">
                     <div class="p-4 border-b border-kvk-gray-700 bg-amber-500/5">
                         <h3 class="font-bold text-xl text-amber-400" data-i18n="day_construction">🏗️ Día 1: Construcción</h3>
                         <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
@@ -462,7 +462,7 @@
 
                 {% if event.active_days.training %}
                 <!-- Training Day -->
-                <div class="bg-kvk-gray-800 rounded-2xl border border-red-500/20 overflow-hidden">
+                <div class="bg-kvk-gray-800 rounded-2xl border border-red-500/20 overflow-hidden order-3 flex flex-col">
                     <div class="p-4 border-b border-kvk-gray-700 bg-red-500/5">
                         <h3 class="font-bold text-xl text-red-400" data-i18n="day_training">⚔️ Día 4: Entrenamiento</h3>
                         <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
@@ -511,7 +511,7 @@
 
                 {% if event.active_days.research %}
                 <!-- Research Day -->
-                <div class="bg-kvk-gray-800 rounded-2xl border border-blue-500/20 overflow-hidden">
+                <div class="bg-kvk-gray-800 rounded-2xl border border-blue-500/20 overflow-hidden flex flex-col {{ 'order-2' if event.active_days.research_day == 2 else 'order-4' }}">
                     <div class="p-4 border-b border-kvk-gray-700 bg-blue-500/5">
                         <h3 class="font-bold text-xl text-blue-400">🔬 Día {{ event.active_days.research_day if event.active_days.research_day else '5' }}<span data-i18n="day_research_suffix">: Investigación</span></h3>
                         <p class="text-xs text-gray-400 mt-1" data-i18n="select_all_slots_hint">Selecciona todas las franjas horarias posibles</p>
