@@ -39,7 +39,7 @@ def _parse_time_to_minutes(time_str: str) -> int:
         ("día(s)", "d"), ("día", "d"), ("dias", "d"), ("days", "d"), ("day", "d"),
         ("horas", "h"), ("hora", "h"), ("hours", "h"), ("hour", "h"),
         ("minutos", "m"), ("minuto", "m"), ("minutes", "m"), ("minute", "m"), ("min", "m"),
-        ("(s)", ""), (",", "."),
+        ("(s)", ""), (",", ""), (".", ""), ("(es)", ""),
     ]:
         s = s.replace(old, new)
     s = s.strip()

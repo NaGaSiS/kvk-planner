@@ -764,6 +764,12 @@
             avatarEl.classList.remove('hidden');
             document.getElementById('player-avatar-placeholder').classList.add('hidden');
             document.getElementById('avatar_url_field').value = data.avatar_url;
+        } else {
+            const avatarEl = document.getElementById('player-avatar');
+            avatarEl.src = "";
+            avatarEl.classList.add('hidden');
+            document.getElementById('player-avatar-placeholder').classList.remove('hidden');
+            document.getElementById('avatar_url_field').value = "";
         }
 
         // City/TG/TC level badge and label

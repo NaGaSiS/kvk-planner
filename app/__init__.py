@@ -400,12 +400,16 @@ def create_app():
             if not kingdom_missing:
                 try:
                     scraped = kingshot_scraper.lookup_player(player_id, kingdom)
+                    print(f"SCRAPED: {scraped}")
                     if scraped.get("found"):
                         player_name = scraped.get("player_name") or player_name
                         avatar_url = scraped.get("avatar_url") or avatar_url
                         alliance_name = scraped.get("alliance_name") or alliance_name
                         city_level = scraped.get("city_level") or city_level
-                except Exception:
+                        city_label = scraped.get("city_label")
+                        print(f"UPDATED: {player_name}, {alliance_name}")
+                except Exception as e:
+                    print(f"EXCEPTION IN SCRAPE: {e}")
                     pass
 
             result = {
@@ -414,7 +418,7 @@ def create_app():
                 "player_name": player_name,
                 "avatar_url": avatar_url,
                 "city_level": city_level,
-                "city_label": f"TC {city_level}" if city_level else None,
+                "city_label": locals().get("city_label") or (f"TC {city_level}" if city_level else None),
                 "alliance_name": alliance_name,
                 "kingdom": kingdom or first_sub.get("kingdom"),
                 "source": "local_db",
