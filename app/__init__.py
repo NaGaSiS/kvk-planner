@@ -525,21 +525,18 @@ def create_app():
         city_level = int(city_level_str) if city_level_str.isdigit() else None
         avatar_url = request.form.get("avatar_url") or None
 
-        # Fetch from kingshot if avatar_url is missing or player_name is empty
-        if player_id and kingdom and (not avatar_url or not player_name or not alliance_name):
+        # Always try to fetch from kingshot to prevent users from faking their names/alliances
+        if player_id and kingdom:
             try:
-                fetched_info = kingshot_scraper.fetch_player_info(player_id, kingdom)
-                if fetched_info and fetched_info.get("success"):
-                    if not avatar_url and fetched_info.get("avatar_url"):
-                        avatar_url = fetched_info["avatar_url"]
-                    if not player_name and fetched_info.get("name"):
-                        player_name = fetched_info["name"]
-                    if not alliance_name and fetched_info.get("alliance"):
-                        alliance_name = fetched_info["alliance"]
-                    if not city_level and fetched_info.get("city_level"):
-                        city_level = fetched_info["city_level"]
+                scraped = kingshot_scraper.lookup_player(player_id, kingdom)
+                if scraped and scraped.get("found"):
+                    avatar_url = scraped.get("avatar_url") or avatar_url
+                    player_name = scraped.get("player_name") or player_name
+                    alliance_name = scraped.get("alliance_name") or alliance_name
+                    if scraped.get("city_level"):
+                        city_level = scraped.get("city_level")
             except Exception as e:
-                app.audit_logger.error(f"Error auto-fetching player info: {e}")
+                app.audit_logger.error(f"Error auto-fetching player info on submit: {e}")
 
         # Server-side validation
         if not player_id.isdigit():
