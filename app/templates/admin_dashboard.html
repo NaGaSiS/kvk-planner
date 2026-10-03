@@ -291,8 +291,9 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 0)" data-i18n="col_player">Player ↕</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 1)" data-i18n="col_alliance">Alliance ↕</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 2, true)" data-i18n="col_score">Score ↕</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 3)" data-i18n="col_status">Status ↕</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 2)" data-i18n="col_kingdom">Kingdom ↕</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 3, true)" data-i18n="col_score">Score ↕</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase cursor-pointer hover:text-kvk-gold transition-colors" onclick="sortTable('submissions-table-{{day}}', 4)" data-i18n="col_status">Status ↕</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase" data-i18n="col_assigned_slot">Assigned Slot / Manual Set</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase" data-i18n="col_actions">Actions</th>
                             </tr>
@@ -346,6 +347,9 @@
                                                 </svg>
                                             </button>
                                         </form>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-gray-400 text-sm font-mono text-center">
+                                        {{ sub.kingdom or '-' }}
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-300">
                                         <span class="cursor-help border-b border-dashed border-gray-500" title="{{ sub.resources_text }}">

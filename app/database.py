@@ -59,6 +59,7 @@ def init_db():
             accelerators_url TEXT,
             city_level INTEGER,
             alliance_name TEXT,
+            kingdom TEXT,
             resources REAL NOT NULL,
             raw_data TEXT NOT NULL,
             feasible_slots TEXT NOT NULL,
@@ -71,6 +72,11 @@ def init_db():
     # Table exists (just created or already there), check if columns exist
     cursor.execute("PRAGMA table_info(submissions)")
     columns = [column[1] for column in cursor.fetchall()]
+        if "kingdom" not in columns:
+        try:
+            cursor.execute("ALTER TABLE submissions ADD COLUMN kingdom TEXT")
+        except sqlite3.OperationalError:
+            pass
     if "avatar_url" not in columns:
         try:
             cursor.execute("ALTER TABLE submissions ADD COLUMN avatar_url TEXT")

@@ -622,11 +622,11 @@ def create_app():
             }
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     submission_id, event_uid, day_type, player_name, player_id,
                     avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, score, json.dumps(raw_data), feasible_slots,
+                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
@@ -639,11 +639,11 @@ def create_app():
             raw_data = {"speedups": training_speedups}
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     submission_id, event_uid, day_type, player_name, player_id,
                     avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, score, json.dumps(raw_data), feasible_slots,
+                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
@@ -657,11 +657,11 @@ def create_app():
             raw_data = {"speedups": research_speedups, "truegold_dust": truegold_dust}
             submission_id = f"{event_uid}_{player_id}_{day_type}"
             db.execute(
-                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     submission_id, event_uid, day_type, player_name, player_id,
                     avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, score, json.dumps(raw_data), feasible_slots,
+                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
                 ),
             )
 
@@ -1260,9 +1260,9 @@ def create_app():
                 """
                 INSERT INTO submissions (
                     id, event_uid, day_type, player_name, player_id, 
-                    avatar_url, backpack_url, alliance_name, resources, 
+                    avatar_url, backpack_url, alliance_name, kingdom, resources, 
                     raw_data, feasible_slots, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     sub_id,
