@@ -179,27 +179,36 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
 
     prompt = (
         "This is a screenshot from the mobile game KingShot showing speedup items.\n"
-        "It might be the Summary screen (list format) OR the Backpack Grid screen.\n\n"
-        "IF IT IS THE SUMMARY SCREEN (List format with text like 'Acelerador General'):\n"
-        "Extract the TOTAL TIME for each category directly. (e.g. '10 dias 4h 44min')\n\n"
-        "IF IT IS THE GRID SCREEN (Multiple blue arrow icons with quantities):\n"
-        "Identify the category of each blue arrow by its BOTTOM-LEFT MINI-ICON:\n"
-        "- NO mini-icon = general_speedup\n"
-        "- Hammer = construction_speedup\n"
-        "- Helmet/Soldier mask = training_speedup\n"
-        "- Book with feather = research_speedup\n"
-        "- Green Cross = healing_speedup\n"
-        "You must do your best to calculate the total time for each category by multiplying the time on top of the icon (1m, 5m, 1hr, 8hr) by the quantity at the bottom right, and summing them up. Convert to 'Xd Xh Xm' format.\n\n"
-        "Return EXACTLY this JSON format:\n"
+        "CRITICAL INSTRUCTION: There are two possible screens the user might upload:\n"
+        "1. SUMMARY SCREEN: A list format with text like 'Acelerador General' and total times like '10 dia(s) 4 h 44 min'.\n"
+        "2. GRID SCREEN: The backpack view with a grid of many small blue arrow icons and numbers like 1,518.\n\n"
+        "IF YOU SEE THE GRID SCREEN (#2):\n"
+        "You CANNOT calculate the totals accurately from the grid. You MUST reject it and return EXACTLY this JSON:\n"
+        '{"error": "wrong_screen"}\n\n'
+        "IF YOU SEE THE SUMMARY SCREEN (#1):\n"
+        "Extract the TOTAL TIME for each category directly.\n"
+        "- general_speedup (Acelerador General)\n"
+        "- construction_speedup (Acelerador de construcción)\n"
+        "- training_speedup (Acelerador de Entrenamiento)\n"
+        "- research_speedup (Acelerador de Investigación)\n"
+        "- healing_speedup (Acelerador de Curación)\n\n"
+        "Return EXACTLY this JSON format (replace values with real ones, use '0m' if missing):\n"
         '{"general_speedup":"10d 4h 44m","construction_speedup":"1d 18h 5m",'
         '"training_speedup":"9d 16h 31m","research_speedup":"9d 2h 32m",'
-        '"healing_speedup":"0m","confidence":0.95}\n'
-        "Use '0m' for missing categories."
+        '"healing_speedup":"0m","confidence":0.95}'
     )
 
     try:
         raw = _call_groq_vision(image_bytes, prompt, api_key)
         data = _find_last_json_object(raw)
+        
+        if "error" in data and data["error"] == "wrong_screen":
+            return {
+                "success": False,
+                "error": "Por favor, pulsa el icono 📊 (arriba a la derecha en el juego) y sube la captura del 'Resumen de Aceleradores', no la cuadrícula de la mochila.",
+                "general": 0, "construction": 0, "training": 0, "research": 0, "healing": 0,
+                "confidence": 0,
+            }
         return {
             "success": True,
             "general": _parse_time_to_minutes(data.get("general_speedup", "0")),
