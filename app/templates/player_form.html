@@ -388,6 +388,11 @@
             </div>
 
             <!-- ===== RESOURCES & SLOTS SECTION ===== -->
+            <div id="tc-level-warning" class="hidden mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg flex items-start gap-2">
+                <span class="text-red-400 mt-0.5">⚠️</span>
+                <p class="text-sm text-red-200" data-i18n="tg_level_warning">Level too low (< TC30). TrueGold will not be recorded, only speedups.</p>
+            </div>
+            
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {% if event.active_days.construction %}
@@ -423,12 +428,18 @@
                             <p id="speedups-construction-display" class="text-xs text-kvk-gold mt-1"></p>
                         </div>
                         <div>
-                            <label for="truegold" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="truegold_label">🥇 TrueGold</label>
+                            <label for="truegold" class="flex items-center gap-2 text-sm font-semibold text-gray-300 mb-1">
+                                    <img src="{{ url_for('static', filename='truegold.png') }}" class="w-5 h-5 object-contain" alt="">
+                                    <span data-i18n="truegold_label">🥇 TrueGold</span>
+                                </label>
                             <input type="number" name="truegold" id="truegold" min="0"
                                    class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
                         </div>
                         <div>
-                            <label for="tempered_truegold" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="tempered_truegold_label">✨ TrueGold Templado</label>
+                            <label for="tempered_truegold" class="flex items-center gap-2 text-sm font-semibold text-gray-300 mb-1">
+                                    <img src="{{ url_for('static', filename='truegold.png') }}" class="w-5 h-5 object-contain" style="filter: brightness(1.2) hue-rotate(-10deg);" alt="">
+                                    <span data-i18n="tempered_truegold_label">✨ TrueGold Templado</span>
+                                </label>
                             <input type="number" name="tempered_truegold" id="tempered_truegold" min="0"
                                    class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
                         </div>
@@ -531,7 +542,10 @@
                             <p id="speedups-research-display" class="text-xs text-kvk-gold mt-1"></p>
                         </div>
                         <div>
-                            <label for="truegold_dust" class="block text-sm font-semibold text-gray-300 mb-1" data-i18n="truegold_dust_label">✨ TrueGold Dust</label>
+                            <label for="truegold_dust" class="flex items-center gap-2 text-sm font-semibold text-gray-300 mb-1">
+                                    <img src="{{ url_for('static', filename='truegold_dust.png') }}" class="w-5 h-5 object-contain" alt="">
+                                    <span data-i18n="truegold_dust_label">✨ TrueGold Dust</span>
+                                </label>
                             <input type="number" name="truegold_dust" id="truegold_dust" min="0"
                                    class="w-full bg-kvk-gray-900 border border-kvk-gray-700 rounded-lg text-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-kvk-gold transition">
                         </div>
@@ -828,7 +842,50 @@
             if (rd.truegold_dust !== undefined) document.getElementById('truegold_dust').value = rd.truegold_dust;
             if (subs.research.feasible_slots) restoreSlots('research', subs.research.feasible_slots);
         }
+        checkCityLevel();
     }
+
+    
+    function checkCityLevel() {
+        const badge = document.getElementById('city-badge');
+        const levelInput = document.getElementById('city_level');
+        const level = parseInt(levelInput.value) || 0;
+        
+        let isTooLow = false;
+        const badgeText = badge.textContent.trim();
+        if (badgeText.startsWith('TC') && level < 30) {
+            isTooLow = true;
+        } else if (badgeText === '' && level < 30) {
+            isTooLow = true;
+        }
+        
+        const tgInputs = ['truegold', 'tempered_truegold', 'truegold_dust'];
+        const warningEl = document.getElementById('tc-level-warning');
+        
+        if (isTooLow) {
+            tgInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '';
+                    el.disabled = true;
+                    el.classList.add('opacity-30', 'cursor-not-allowed');
+                }
+            });
+            if (warningEl) warningEl.classList.remove('hidden');
+        } else {
+            tgInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = false;
+                    el.classList.remove('opacity-30', 'cursor-not-allowed');
+                }
+            });
+            if (warningEl) warningEl.classList.add('hidden');
+        }
+    }
+    
+    // Check level dynamically when city_level changes manually
+    document.getElementById('city_level').addEventListener('input', checkCityLevel);
 
     function setSpeedupMinutes(section, totalMinutes) {
         const d = Math.floor(totalMinutes / 1440);
