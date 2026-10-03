@@ -1,4 +1,4 @@
-﻿name: Build & Push Docker Image
+name: Build & Push Docker Image
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 env:
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
-  DOCKERHUB_IMAGE: nagasis/kvk-planner
+  DOCKERHUB_IMAGE: ismaelrobledo/kvk-planner
 
 jobs:
   build-and-push:
