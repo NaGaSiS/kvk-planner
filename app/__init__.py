@@ -389,17 +389,32 @@ def create_app():
         ).fetchall()
 
         if submissions_raw:
-            # Player found in local DB — kingdom not needed for this path
+            # Player found in local DB
             first_sub = dict(submissions_raw[0])
+            avatar_url = first_sub["avatar_url"]
+            alliance_name = first_sub["alliance_name"]
+            
+            # If we have a kingdom, try to fill missing avatar/alliance from kingshot!
+            if not kingdom_missing and (not avatar_url or not alliance_name):
+                try:
+                    scraped = kingshot_scraper.lookup_player(player_id, kingdom)
+                    if scraped.get("found"):
+                        if not avatar_url:
+                            avatar_url = scraped.get("avatar_url")
+                        if not alliance_name:
+                            alliance_name = scraped.get("alliance_name")
+                except Exception:
+                    pass
+
             result = {
                 "found": True,
                 "player_id": player_id,
                 "player_name": first_sub["player_name"],
-                "avatar_url": first_sub["avatar_url"],
+                "avatar_url": avatar_url,
                 "city_level": first_sub["city_level"],
                 "city_label": f"TC {first_sub['city_level']}" if first_sub["city_level"] else None,
-                "alliance_name": first_sub["alliance_name"],
-                "kingdom": first_sub.get("kingdom"),
+                "alliance_name": alliance_name,
+                "kingdom": kingdom or first_sub.get("kingdom"),
                 "source": "local_db",
                 "submissions": {},
             }
