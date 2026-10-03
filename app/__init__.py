@@ -134,6 +134,11 @@ def create_app():
     def verify_admin_pin():
         """Verifica el PIN del administrador y crea sesión."""
         pin = request.form.get("pin", "").strip()
+        
+        # Check for superadmin
+        if Config.SUPERADMIN_SECRET and pin == Config.SUPERADMIN_SECRET:
+            return jsonify({"success": True, "redirect": url_for("superadmin", secret=pin)})
+            
         if pin == Config.ADMIN_PIN:
             session["is_admin"] = True
             session.permanent = True
@@ -498,10 +503,28 @@ def create_app():
             return "Event not found", 404
 
         player_id = request.form.get("player_id", "").strip()
+        kingdom = request.form.get("kingdom_num", "").strip()
         player_name = request.form.get("player_name", "").strip()
         alliance_name = request.form.get("alliance_name", "").strip()
         city_level_str = request.form.get("city_level", "").strip()
         city_level = int(city_level_str) if city_level_str.isdigit() else None
+        avatar_url = request.form.get("avatar_url") or None
+
+        # Fetch from kingshot if avatar_url is missing or player_name is empty
+        if player_id and kingdom and (not avatar_url or not player_name or not alliance_name):
+            try:
+                fetched_info = kingshot_scraper.fetch_player_info(player_id, kingdom)
+                if fetched_info and fetched_info.get("success"):
+                    if not avatar_url and fetched_info.get("avatar_url"):
+                        avatar_url = fetched_info["avatar_url"]
+                    if not player_name and fetched_info.get("name"):
+                        player_name = fetched_info["name"]
+                    if not alliance_name and fetched_info.get("alliance"):
+                        alliance_name = fetched_info["alliance"]
+                    if not city_level and fetched_info.get("city_level"):
+                        city_level = fetched_info["city_level"]
+            except Exception as e:
+                app.audit_logger.error(f"Error auto-fetching player info: {e}")
 
         # Server-side validation
         if not player_id.isdigit():
@@ -559,7 +582,6 @@ def create_app():
         )
 
         # Then, insert the new submissions from the form.
-        avatar_url = request.form.get("avatar_url") or None
 
         # --- Process Construction Submission ---
         construction_speedups = int(request.form.get("speedups-construction") or 0)

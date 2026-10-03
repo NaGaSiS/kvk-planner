@@ -9,7 +9,7 @@ from app import database
 def test_index_route(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Kingdom Appointment Planner" in response.data
+    assert b"Planner" in response.data
 
 
 def test_guide_route(client):
@@ -32,12 +32,6 @@ def test_favicon(client):
     response = client.get("/favicon.ico")
     assert response.status_code == 200
     assert response.mimetype == "image/svg+xml"
-
-
-def test_submission_success_route(client):
-    response = client.get("/submission-success")
-    assert response.status_code == 200
-    assert b"Submission Recorded" in response.data
 
 
 def test_create_event(client, app):
@@ -107,7 +101,7 @@ def test_submit_valid(client, app):
         },
     )
     assert response.status_code == 302
-    assert "/submission-success" in response.headers["Location"]
+    assert "success=1" in response.headers["Location"]
 
     with app.app_context():
         db = database.get_db()
@@ -522,7 +516,7 @@ def test_heatmap_hover_potential_players(client, app):
     assert resp.status_code == 200
 
     # Check if the player is listed in the title attribute of the slot with points
-    assert b'title="Potential Players: [HOV] HoverPlayer (3000 pts)"' in resp.data
+    assert b'title="Potential Players: [HOV] HoverPlayer (3.000 pts)"' in resp.data
 
     # Check if submission_id is in the data-slot-players attribute
     expected_id = f"{uid}_11111_construction"

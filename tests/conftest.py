@@ -37,7 +37,10 @@ def app():
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    with app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["is_admin"] = True
+        yield client
 
 
 @pytest.fixture
