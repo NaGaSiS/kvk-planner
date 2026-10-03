@@ -391,28 +391,30 @@ def create_app():
         if submissions_raw:
             # Player found in local DB
             first_sub = dict(submissions_raw[0])
+            player_name = first_sub["player_name"]
             avatar_url = first_sub["avatar_url"]
             alliance_name = first_sub["alliance_name"]
+            city_level = first_sub["city_level"]
             
-            # If we have a kingdom, try to fill missing avatar/alliance from kingshot!
-            if not kingdom_missing and (not avatar_url or not alliance_name):
+            # Always try to fetch fresh/real data from Kingshot to prevent fake data
+            if not kingdom_missing:
                 try:
                     scraped = kingshot_scraper.lookup_player(player_id, kingdom)
                     if scraped.get("found"):
-                        if not avatar_url:
-                            avatar_url = scraped.get("avatar_url")
-                        if not alliance_name:
-                            alliance_name = scraped.get("alliance_name")
+                        player_name = scraped.get("player_name") or player_name
+                        avatar_url = scraped.get("avatar_url") or avatar_url
+                        alliance_name = scraped.get("alliance_name") or alliance_name
+                        city_level = scraped.get("city_level") or city_level
                 except Exception:
                     pass
 
             result = {
                 "found": True,
                 "player_id": player_id,
-                "player_name": first_sub["player_name"],
+                "player_name": player_name,
                 "avatar_url": avatar_url,
-                "city_level": first_sub["city_level"],
-                "city_label": f"TC {first_sub['city_level']}" if first_sub["city_level"] else None,
+                "city_level": city_level,
+                "city_label": f"TC {city_level}" if city_level else None,
                 "alliance_name": alliance_name,
                 "kingdom": kingdom or first_sub.get("kingdom"),
                 "source": "local_db",
