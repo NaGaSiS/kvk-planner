@@ -63,6 +63,8 @@ window.KVK_I18N = {
     sa_col_fill: 'Fill Rate',
     sa_no_events: 'No events found for the selected time range.',
     sa_player_form: 'Player Form ↗',
+    btn_create_event: 'Create New Event',
+    sa_col_actions: 'Actions',
     // ── player_form lower section ──
     ai_section_title: 'AI Image Analysis',
     ai_section_sub: 'Upload screenshots and AI will fill in the data automatically',
@@ -229,6 +231,8 @@ window.KVK_I18N = {
     sa_col_fill: 'Tasa de Llenado',
     sa_no_events: 'No se encontraron eventos para el rango de tiempo seleccionado.',
     sa_player_form: 'Form. Jugador ↗',
+    btn_create_event: 'Crear Evento Nuevo',
+    sa_col_actions: 'Acciones',
     // ── player_form sección inferior ──
     ai_section_title: 'Análisis de Imágenes con IA',
     ai_section_sub: 'Sube capturas de pantalla y la IA rellenará los datos automáticamente',
@@ -393,6 +397,8 @@ window.KVK_I18N = {
     sa_col_fill: 'Taux de Remplissage',
     sa_no_events: 'Aucun événement trouvé pour la plage de temps sélectionnée.',
     sa_player_form: 'Formulaire ↗',
+    btn_create_event: 'Créer un Nouvel Événement',
+    sa_col_actions: 'Actions',
     // ── player_form section inférieure ──
     ai_section_title: "Analyse d'Images par IA",
     ai_section_sub: "Téléchargez des captures d'écran et l'IA remplira les données automatiquement",
@@ -558,6 +564,8 @@ window.KVK_I18N = {
     sa_col_fill: 'Füllrate',
     sa_no_events: 'Keine Events für den gewählten Zeitraum gefunden.',
     sa_player_form: 'Spielerformular ↗',
+    btn_create_event: 'Neues Event Erstellen',
+    sa_col_actions: 'Aktionen',
     // ── player_form unterer Bereich ──
     ai_section_title: 'KI-Bildanalyse',
     ai_section_sub: 'Lade Screenshots hoch und die KI füllt die Daten automatisch aus',

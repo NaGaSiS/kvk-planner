@@ -63,8 +63,13 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        <!-- Time Range Filter -->
-        <div class="flex justify-center">
+        <!-- Top Actions & Time Range Filter -->
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-2.5 rounded-full shadow-lg transition-transform transform hover:scale-105">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <span data-i18n="btn_create_event">Crear Evento Nuevo</span>
+            </a>
+            
             <div class="inline-flex glass-panel p-1 rounded-lg">
                 {% set ranges = [('all', 'All Time'), ('1w', 'Last 7 Days'), ('2w', 'Last 14 Days'), ('4w', 'Last 28 Days')] %}
                 {% for val, label in ranges %}
@@ -130,6 +135,7 @@
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_subs">Submissions</th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_assigned">Assigned</th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_fill">Fill Rate</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider" data-i18n="sa_col_actions">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-800">
@@ -179,6 +185,22 @@
                                     <span class="text-sm text-gray-500">-</span>
                                 {% endif %}
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <button onclick="copyLink('{{ url_for('player_form', event_uid=ev.uid, _external=True) }}')" class="p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded transition" title="Copiar URL del Formulario">
+                                        📋
+                                    </button>
+                                    <button onclick="copyLink('{{ url_for('locked_appointments', event_uid=ev.uid, _external=True) }}')" class="p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded transition" title="Copiar URL del Calendario">
+                                        📅
+                                    </button>
+                                    <button onclick="copyLink('{{ url_for('admin_dashboard', event_uid=ev.uid, _external=True) }}?secret={{ ev.admin_secret }}')" class="p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded transition" title="Copiar URL del Admin">
+                                        ⚙️
+                                    </button>
+                                    <button onclick="openDeleteModal('{{ ev.uid }}', '{{ ev.name|replace("'", "\\'") }}')" class="p-1.5 bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white rounded transition ml-2" title="Borrar Evento">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
@@ -193,5 +215,70 @@
         </div>
     </main>
 
+
+    <!-- Delete Event Modal -->
+    <div id="delete-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-2xl z-10 w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold text-red-500 mb-2 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Delete Event
+            </h3>
+            <p class="text-gray-300 mb-4 text-sm">
+                You are about to completely delete <strong id="delete-event-name" class="text-white"></strong> and ALL of its submissions and assignments. This action CANNOT be undone.
+            </p>
+            <form action="{{ url_for('superadmin_delete_event') }}" method="POST">
+                <input type="hidden" name="event_uid" id="delete-event-uid">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Superadmin Secret</label>
+                    <input type="password" name="superadmin_secret" required
+                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors text-sm font-medium">Confirm Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-3 transition-opacity duration-300">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg" class="text-sm font-medium">URL Copied!</span>
+    </div>
+
+    <script>
+        function copyLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('URL copiada al portapapeles');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                showToast('Error al copiar URL', '❌');
+            });
+        }
+
+        function showToast(msg, icon = '✅') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            document.getElementById('toast-icon').textContent = icon;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function openDeleteModal(uid, name) {
+            document.getElementById('delete-event-uid').value = uid;
+            document.getElementById('delete-event-name').textContent = name;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.add('hidden');
+            document.getElementById('delete-event-uid').value = '';
+            document.getElementById('delete-event-name').textContent = '';
+        }
+    </script>
 </body>
 </html>

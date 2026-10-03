@@ -1454,6 +1454,28 @@ def create_app():
         metrics = get_superadmin_metrics(db, time_range)
         return render_template("superadmin.html", metrics=metrics, current_range=time_range)
 
+    @app.route("/superadmin/delete_event", methods=["POST"])
+    def superadmin_delete_event():
+        import hmac as _hmac
+
+        secret_param = request.form.get("superadmin_secret", "")
+        expected = app.config.get("SUPERADMIN_SECRET", "")
+        if not expected or not _hmac.compare_digest(secret_param, expected):
+            return "Forbidden — wrong superadmin secret", 403
+
+        event_uid = request.form.get("event_uid")
+        if not event_uid:
+            return "Missing event_uid", 400
+
+        db = database.get_db()
+        db.execute("DELETE FROM assignments WHERE event_uid = ?", (event_uid,))
+        db.execute("DELETE FROM submissions WHERE event_uid = ?", (event_uid,))
+        db.execute("DELETE FROM events WHERE uid = ?", (event_uid,))
+        db.commit()
+
+        app.audit_logger.info(f"SUPERADMIN: Deleted event {event_uid} and all associated data.")
+        return redirect(url_for("superadmin"))
+
     @app.route("/superadmin/logout")
     def superadmin_logout():
         session.pop("is_superadmin", None)
