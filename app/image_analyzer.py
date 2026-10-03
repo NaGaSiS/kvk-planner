@@ -1,4 +1,4 @@
-﻿"""
+"""
 image_analyzer.py
 Módulo de análisis de imágenes del juego KingShot mediante Groq Vision API (GRATIS).
 Modelo: qwen/qwen3.6-27b  (con capacidad de visión)
@@ -178,21 +178,23 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
         }
 
     prompt = (
-        "This is a screenshot from the mobile game KingShot showing the speedup items "
-        "in the backpack Accelerate tab (Spanish: Acelerar).\n\n"
-        "Extract the TOTAL TIME for each speedup category shown. "
-        "Times look like '10 dias 4h 44min' or '9d 16h 31m'.\n\n"
-        "Categories (Spanish names in parentheses):\n"
-        "- general_speedup (Acelerador General)\n"
-        "- construction_speedup (Acelerador de Construccion)\n"
-        "- training_speedup (Acelerador de Entrenamiento)\n"
-        "- research_speedup (Acelerador de Investigacion)\n"
-        "- healing_speedup (Acelerador de Curacion)\n\n"
-        "After your analysis, output EXACTLY this JSON (replace X values with real ones):\n"
+        "This is a screenshot from the mobile game KingShot showing speedup items.\n"
+        "It might be the Summary screen (list format) OR the Backpack Grid screen.\n\n"
+        "IF IT IS THE SUMMARY SCREEN (List format with text like 'Acelerador General'):\n"
+        "Extract the TOTAL TIME for each category directly. (e.g. '10 dias 4h 44min')\n\n"
+        "IF IT IS THE GRID SCREEN (Multiple blue arrow icons with quantities):\n"
+        "Identify the category of each blue arrow by its BOTTOM-LEFT MINI-ICON:\n"
+        "- NO mini-icon = general_speedup\n"
+        "- Hammer = construction_speedup\n"
+        "- Helmet/Soldier mask = training_speedup\n"
+        "- Book with feather = research_speedup\n"
+        "- Green Cross = healing_speedup\n"
+        "You must do your best to calculate the total time for each category by multiplying the time on top of the icon (1m, 5m, 1hr, 8hr) by the quantity at the bottom right, and summing them up. Convert to 'Xd Xh Xm' format.\n\n"
+        "Return EXACTLY this JSON format:\n"
         '{"general_speedup":"10d 4h 44m","construction_speedup":"1d 18h 5m",'
         '"training_speedup":"9d 16h 31m","research_speedup":"9d 2h 32m",'
-        '"healing_speedup":"0d 0h 7m","confidence":0.95}\n'
-        "Use string format 'Xd Xh Xm'. Use '0m' if a category is missing."
+        '"healing_speedup":"0m","confidence":0.95}\n'
+        "Use '0m' for missing categories."
     )
 
     try:
@@ -220,7 +222,7 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
 def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
     """
     Analiza la pestaña 'Recursos' de la mochila KingShot.
-    Detecta TrueGold, TrueGold Dust, TrueGold Template.
+    Detecta TrueGold, TrueGold Dust, TrueGold Template (Tempered Truegold).
     """
     if not api_key:
         return {
@@ -230,21 +232,16 @@ def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
         }
 
     prompt = (
-        "This is a KingShot game Backpack > Resources tab screenshot.\n\n"
-        "In the TOP ROW, after the blue diamond (ignore it), there are 3 gold items in order:\n"
-        "  Position 2 (leftmost gold item): **truegold** — a GREY/SILVER rough rocky nugget/stone. "
-        "It looks grayish-silver, like a raw unrefined ore chunk. NOT shiny gold colored.\n"
-        "  Position 3: **truegold_template** — a BRIGHT GOLDEN YELLOW cast/mold piece. "
-        "It is a shiny golden color, shaped like a molded ingot or cast form.\n"
-        "  Position 4 (rightmost in top row): **truegold_dust** — GOLDEN POWDER/SAND. "
-        "It looks like a small pile of fine golden dust or sand particles.\n\n"
-        "IMPORTANT: truegold (position 2) is the GREY one with the LARGEST number. "
-        "Do NOT confuse it with the gold-colored items next to it.\n\n"
-        "Read the quantity shown BELOW each icon.\n\n"
-        "Return EXACTLY this JSON (replace 0 with real values from the image):\n"
-        '{"truegold":7820,"truegold_template":505,"truegold_dust":1042,'
-        '"confidence":0.95,"notes":"describe what you saw"}\n'
-        "All quantities must be plain integers (no commas). Use 0 if an item is not visible."
+        "This is an image of KingShot game resources. The user might have uploaded the full backpack or just a cropped image of specific items.\n"
+        "Identify the quantities of the following specific items by their VISUAL appearance. If an item is NOT in the image, you MUST set its value to 0. Do NOT invent numbers.\n\n"
+        "1. **truegold** (Truegold): A SOLID SHINY GOLD NUGGET cube with smooth metallic golden facets.\n"
+        "2. **truegold_template** (Tempered Truegold): A GLOWING YELLOW translucent cube encased in a brown metal frame with spiked corners.\n"
+        "3. **truegold_dust** (Truegold Dust): A dark tray filled with YELLOW GOLDEN POWDER/SAND.\n"
+        "4. (Ignore) Lesser Truegold: A dark brown/grey rocky cube with orange glowing cracks.\n\n"
+        "Read the white number shown on the bottom right of each matched icon.\n"
+        "Return EXACTLY this JSON:\n"
+        '{"truegold":7820,"truegold_template":505,"truegold_dust":1042,"confidence":0.95}\n'
+        "Use 0 for items not present."
     )
 
     try:
@@ -256,7 +253,6 @@ def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
             "truegold_dust": _parse_quantity(str(data.get("truegold_dust", 0))),
             "truegold_template": _parse_quantity(str(data.get("truegold_template", 0))),
             "confidence": float(data.get("confidence", 0.8)),
-            "notes": data.get("notes", ""),
         }
     except Exception as e:
         logger.exception("Error analizando imagen de mochila con Groq")

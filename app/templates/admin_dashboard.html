@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -82,7 +82,7 @@
 
         <div id="admin-dynamic-content">
         <!-- Main Actions -->
-        <div class="bg-kvk-gray-800 border border-kvk-gray-700 p-4 rounded-xl shadow-md mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="bg-kvk-gray-800 border border-kvk-gray-700 p-4 rounded-xl shadow-md mb-6 flex flex-wrap items-end justify-between gap-4">
             <div class="flex flex-wrap gap-4">
                 <div>
                     <h2 class="text-xl font-bold mb-2 text-gray-100" data-i18n="global_actions">Global Actions</h2>
@@ -113,7 +113,7 @@
                 </div>
             </div>
             <div class="flex space-x-4">
-                <a href="{{ player_url }}" target="_blank" class="bg-kvk-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-kvk-gray-600 transition duration-300" data-i18n="admin_player_form_link">Player Form</a>
+                <a href="{{ player_url }}" target="_blank" class="bg-kvk-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-kvk-gray-600 transition duration-300 border border-kvk-gray-600" data-i18n="admin_player_form_link">Player Form</a>
 
                 <a href="{{ url_for('locked_appointments', event_uid=event.uid) }}?ref=admin&secret={{ secret }}" target="_blank" class="bg-kvk-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-kvk-gray-600 transition duration-300 flex items-center gap-1.5 border border-kvk-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-kvk-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,7 +122,7 @@
                     <span data-i18n="btn_view_calendar">📅 Ver Calendario</span>
                 </a>
 
-                <a href="{{ finalized_url }}" target="_blank" class="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition duration-300" data-i18n="admin_finalized_schedule">Finalized Schedule</a>
+                <a href="{{ finalized_url }}" target="_blank" class="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 border border-green-500" data-i18n="admin_finalized_schedule">Finalized Schedule</a>
             </div>
         </div>
 
