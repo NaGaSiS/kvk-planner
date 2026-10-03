@@ -9,9 +9,7 @@ def run_distribution_algorithm(event_uid, day_type=None):
     db.row_factory = sqlite3.Row
 
     # Get the active day types for the event
-    event = db.execute(
-        "SELECT active_days, slot_count FROM events WHERE uid = ?", (event_uid,)
-    ).fetchone()
+    event = db.execute("SELECT active_days, slot_count FROM events WHERE uid = ?", (event_uid,)).fetchone()
     if not event:
         return
 
@@ -20,11 +18,7 @@ def run_distribution_algorithm(event_uid, day_type=None):
     if day_type:
         active_days = [day_type]
     else:
-        active_days = [
-            day
-            for day, is_active in json.loads(event["active_days"]).items()
-            if is_active
-        ]
+        active_days = [day for day, is_active in json.loads(event["active_days"]).items() if is_active]
 
     # Reset all relevant submissions for the event to 'Pending' before starting
     if day_type:
@@ -102,9 +96,7 @@ def run_distribution_algorithm(event_uid, day_type=None):
                 continue
 
             # Filter out invalid indices or non-integers to avoid KeyError/TypeError
-            feasible_slots = [
-                s for s in feasible_slots if isinstance(s, int) and 0 <= s < slot_count
-            ]
+            feasible_slots = [s for s in feasible_slots if isinstance(s, int) and 0 <= s < slot_count]
 
             if not feasible_slots:
                 db.execute(
@@ -183,26 +175,25 @@ def get_superadmin_metrics(db, time_range: str = "all") -> dict:
         events_rows = db.execute(
             "SELECT uid, name, active_days, admin_secret, slot_count, created_at "
             "FROM events WHERE created_at >= datetime('now', ?) ORDER BY created_at DESC",
-            (time_filters[valid_range],)
+            (time_filters[valid_range],),
         ).fetchall()
     else:
         events_rows = db.execute(
-            "SELECT uid, name, active_days, admin_secret, slot_count, created_at "
-            "FROM events ORDER BY created_at DESC"
+            "SELECT uid, name, active_days, admin_secret, slot_count, created_at FROM events ORDER BY created_at DESC"
         ).fetchall()
 
-    events = [
-        {"uid": r[0], "name": r[1], "active_days": r[2],
-         "admin_secret": r[3], "slot_count": r[4], "created_at": r[5]}
-        for r in events_rows
-    ]
+    events = [{"uid": r[0], "name": r[1], "active_days": r[2], "admin_secret": r[3], "slot_count": r[4], "created_at": r[5]} for r in events_rows]
 
     if not events:
         return {
-            "time_range": valid_range, "total_events": 0,
-            "total_submissions": 0, "total_unique_players": 0,
-            "total_alliances": 0, "total_kingdoms": 0,
-            "total_assigned_slots": 0, "avg_submissions_per_event": 0.0,
+            "time_range": valid_range,
+            "total_events": 0,
+            "total_submissions": 0,
+            "total_unique_players": 0,
+            "total_alliances": 0,
+            "total_kingdoms": 0,
+            "total_assigned_slots": 0,
+            "avg_submissions_per_event": 0.0,
             "events": [],
         }
 
@@ -213,21 +204,16 @@ def get_superadmin_metrics(db, time_range: str = "all") -> dict:
             "s.alliance_name, s.resources, s.status "
             "FROM submissions s JOIN events e ON s.event_uid = e.uid "
             "WHERE e.created_at >= datetime('now', ?)",
-            (time_filters[valid_range],)
+            (time_filters[valid_range],),
         ).fetchall()
         assigns = db.execute(
             "SELECT a.event_uid FROM assignments a JOIN events e ON a.event_uid = e.uid "
             "WHERE e.created_at >= datetime('now', ?) AND a.player_id IS NOT NULL",
-            (time_filters[valid_range],)
+            (time_filters[valid_range],),
         ).fetchall()
     else:
-        subs = db.execute(
-            "SELECT event_uid, day_type, player_name, player_id, "
-            "alliance_name, resources, status FROM submissions"
-        ).fetchall()
-        assigns = db.execute(
-            "SELECT event_uid FROM assignments WHERE player_id IS NOT NULL"
-        ).fetchall()
+        subs = db.execute("SELECT event_uid, day_type, player_name, player_id, alliance_name, resources, status FROM submissions").fetchall()
+        assigns = db.execute("SELECT event_uid FROM assignments WHERE player_id IS NOT NULL").fetchall()
 
     unique_players = {r[3] for r in subs}
     unique_alliances = {r[4] for r in subs if r[4]}

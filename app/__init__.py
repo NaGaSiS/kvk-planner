@@ -52,9 +52,7 @@ def generate_slot_labels(slot_count=49):
         end_hour = (end_total_minutes // 60) % 24
         end_min = end_total_minutes % 60
 
-        labels.append(
-            f"{start_hour:02d}:{start_min:02d}-\u200b{end_hour:02d}:{end_min:02d}"
-        )
+        labels.append(f"{start_hour:02d}:{start_min:02d}-\u200b{end_hour:02d}:{end_min:02d}")
     return labels
 
 
@@ -68,12 +66,8 @@ def create_app():
     log_dir = os.path.join(app.root_path, "..", "logs")
     os.makedirs(log_dir, exist_ok=True)
 
-    audit_handler = RotatingFileHandler(
-        os.path.join(log_dir, "audit.log"), maxBytes=1000000, backupCount=5
-    )
-    audit_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    )
+    audit_handler = RotatingFileHandler(os.path.join(log_dir, "audit.log"), maxBytes=1000000, backupCount=5)
+    audit_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     audit_logger = logging.getLogger("audit")
     audit_logger.setLevel(logging.INFO)
     audit_logger.addHandler(audit_handler)
@@ -84,14 +78,10 @@ def create_app():
     def inject_global_config():
         slot_count = 49
         try:
-            event_uid = (
-                request.view_args.get("event_uid") if request.view_args else None
-            )
+            event_uid = request.view_args.get("event_uid") if request.view_args else None
             if event_uid:
                 db = database.get_db()
-                row = db.execute(
-                    "SELECT slot_count FROM events WHERE uid = ?", (event_uid,)
-                ).fetchone()
+                row = db.execute("SELECT slot_count FROM events WHERE uid = ?", (event_uid,)).fetchone()
                 if row and row[0] is not None:
                     slot_count = row[0]
         except (RuntimeError, Exception):
@@ -134,11 +124,11 @@ def create_app():
     def verify_admin_pin():
         """Verifica el PIN del administrador y crea sesión."""
         pin = request.form.get("pin", "").strip()
-        
+
         # Check for superadmin
         if Config.SUPERADMIN_SECRET and pin == Config.SUPERADMIN_SECRET:
             return jsonify({"success": True, "redirect": url_for("superadmin", secret=pin)})
-            
+
         if pin == Config.ADMIN_PIN:
             session["is_admin"] = True
             session.permanent = True
@@ -158,16 +148,12 @@ def create_app():
                 lines = f.readlines()
 
             # Filter out technical badges for the in-app guide
-            filtered_lines = [
-                line for line in lines if not line.strip().startswith("[![")
-            ]
+            filtered_lines = [line for line in lines if not line.strip().startswith("[![")]
             content = "".join(filtered_lines)
 
             # Replace local file paths with web-accessible static paths for the in-app guide
             content = content.replace("app/static/images/", "/static/images/")
-            html_content = markdown.markdown(
-                content, extensions=["extra", "toc", "fenced_code"]
-            )
+            html_content = markdown.markdown(content, extensions=["extra", "toc", "fenced_code"])
             return render_template("guide.html", content=html_content)
         except FileNotFoundError:
             return "Guide not found", 404
@@ -217,9 +203,7 @@ def create_app():
         )
         db.commit()
 
-        app.audit_logger.info(
-            f"ADMIN: Created event '{event_name}' with uid {uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Created event '{event_name}' with uid {uid}")
 
         return redirect(url_for("success", event_uid=uid, secret=admin_secret))
 
@@ -228,12 +212,8 @@ def create_app():
         secret = request.args.get("secret")
 
         player_url = url_for("player_form", event_uid=event_uid, _external=True)
-        admin_url = url_for(
-            "admin_dashboard", event_uid=event_uid, secret=secret, _external=True
-        )
-        finalized_url = url_for(
-            "locked_appointments", event_uid=event_uid, _external=True
-        )
+        admin_url = url_for("admin_dashboard", event_uid=event_uid, secret=secret, _external=True)
+        finalized_url = url_for("locked_appointments", event_uid=event_uid, _external=True)
 
         return render_template(
             "success.html",
@@ -268,19 +248,13 @@ def create_app():
 
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
 
         if event is None:
             return "Event not found", 404
 
         active_days_config = json.loads(event["active_days"])
-        active_days = [
-            day
-            for day in ["construction", "training", "research"]
-            if active_days_config.get(day)
-        ]
+        active_days = [day for day in ["construction", "training", "research"] if active_days_config.get(day)]
 
         # Create a dictionary from the database row for the template
         event_dict = {
@@ -296,12 +270,8 @@ def create_app():
         ).fetchall()
 
         # Fetch submissions to get player/alliance names
-        submissions_raw = db.execute(
-            "SELECT * FROM submissions WHERE event_uid = ?", (event_uid,)
-        ).fetchall()
-        submissions_map = {
-            (sub["day_type"], sub["player_id"]): sub for sub in submissions_raw
-        }
+        submissions_raw = db.execute("SELECT * FROM submissions WHERE event_uid = ?", (event_uid,)).fetchall()
+        submissions_map = {(sub["day_type"], sub["player_id"]): sub for sub in submissions_raw}
 
         # Group rich assignments by day_type
         all_assignments = {day: {} for day in active_days}
@@ -328,7 +298,6 @@ def create_app():
             back_label=_build_back_label(request),
             back_ref=request.args.get("ref", "home"),
         )
-
 
     @app.route("/event/<event_uid>")
     def player_form(event_uid):
@@ -376,9 +345,7 @@ def create_app():
         db.row_factory = sqlite3.Row
 
         # Check if event exists
-        event = db.execute(
-            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT uid FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return jsonify({"found": False, "error": "Evento no encontrado"}), 404
 
@@ -395,7 +362,7 @@ def create_app():
             avatar_url = first_sub["avatar_url"]
             alliance_name = first_sub["alliance_name"]
             city_level = first_sub["city_level"]
-            
+
             # Always try to fetch fresh/real data from Kingshot to prevent fake data
             if not kingdom_missing:
                 try:
@@ -410,7 +377,6 @@ def create_app():
                         print(f"UPDATED: {player_name}, {alliance_name}")
                 except Exception as e:
                     print(f"EXCEPTION IN SCRAPE: {e}")
-                    pass
 
             result = {
                 "found": True,
@@ -446,30 +412,34 @@ def create_app():
 
         # Player NOT in local DB — kingdom is required to scrape kingshot.com.br
         if kingdom_missing:
-            return jsonify({
-                "found": False,
-                "requires_kingdom": True,
-                "player_id": player_id,
-                "error": "Kingdom number is required to search external profiles.",
-            })
+            return jsonify(
+                {
+                    "found": False,
+                    "requires_kingdom": True,
+                    "player_id": player_id,
+                    "error": "Kingdom number is required to search external profiles.",
+                }
+            )
 
         scraped = kingshot_scraper.lookup_player(player_id, kingdom)
 
         if scraped.get("found"):
-            return jsonify({
-                "found": True,
-                "player_id": player_id,
-                "player_name": scraped.get("player_name"),
-                "avatar_url": scraped.get("avatar_url"),
-                "city_level": scraped.get("city_level"),
-                "city_label": scraped.get("city_label"),
-                "alliance_name": scraped.get("alliance_name"),
-                "power": scraped.get("power"),
-                "kills": scraped.get("kills"),
-                "kingdom": scraped.get("kingdom"),
-                "source": "kingshot.com.br",
-                "submissions": {},
-            })
+            return jsonify(
+                {
+                    "found": True,
+                    "player_id": player_id,
+                    "player_name": scraped.get("player_name"),
+                    "avatar_url": scraped.get("avatar_url"),
+                    "city_level": scraped.get("city_level"),
+                    "city_label": scraped.get("city_label"),
+                    "alliance_name": scraped.get("alliance_name"),
+                    "power": scraped.get("power"),
+                    "kills": scraped.get("kills"),
+                    "kingdom": scraped.get("kingdom"),
+                    "source": "kingshot.com.br",
+                    "submissions": {},
+                }
+            )
 
         return jsonify({"found": False, "player_id": player_id})
 
@@ -479,9 +449,7 @@ def create_app():
         # Check event exists
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT uid FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return jsonify({"success": False, "error": "Evento no encontrado"}), 404
 
@@ -517,9 +485,7 @@ def create_app():
         db.row_factory = sqlite3.Row
 
         # Verify event exists
-        event = db.execute(
-            "SELECT uid FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT uid FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
 
@@ -551,9 +517,7 @@ def create_app():
         if not player_name:
             return "Invalid Player Name: Cannot be empty", 400
 
-        app.audit_logger.info(
-            f"SUBMISSION: Player {player_name} ({player_id}) submitted resources for event {event_uid}"
-        )
+        app.audit_logger.info(f"SUBMISSION: Player {player_name} ({player_id}) submitted resources for event {event_uid}")
 
         # Handle backpack screenshot upload
         backpack_url = None
@@ -566,9 +530,7 @@ def create_app():
                     return "Invalid file type. Only images are allowed.", 400
                 upload_dir = os.path.join(app.static_folder, "uploads")
                 os.makedirs(upload_dir, exist_ok=True)
-                filename = secure_filename(
-                    f"{event_uid}_{player_id}_{int(time.time())}_backpack_{file.filename}"
-                )
+                filename = secure_filename(f"{event_uid}_{player_id}_{int(time.time())}_backpack_{file.filename}")
                 file.save(os.path.join(upload_dir, filename))
                 backpack_url = url_for("static", filename=f"uploads/{filename}")
 
@@ -583,9 +545,7 @@ def create_app():
                     return "Invalid file type. Only images are allowed.", 400
                 upload_dir = os.path.join(app.static_folder, "uploads")
                 os.makedirs(upload_dir, exist_ok=True)
-                filename = secure_filename(
-                    f"{event_uid}_{player_id}_{int(time.time())}_accel_{file.filename}"
-                )
+                filename = secure_filename(f"{event_uid}_{player_id}_{int(time.time())}_accel_{file.filename}")
                 file.save(os.path.join(upload_dir, filename))
                 accelerators_url = url_for("static", filename=f"uploads/{filename}")
 
@@ -606,15 +566,9 @@ def create_app():
         truegold = int(request.form.get("truegold") or 0)
         tempered_truegold = int(request.form.get("tempered_truegold") or 0)
         feasible_slots = request.form.get("slots-construction", "[]")
-        if (
-            construction_speedups > 0 or truegold > 0 or tempered_truegold > 0
-        ) and feasible_slots != "[]":
+        if (construction_speedups > 0 or truegold > 0 or tempered_truegold > 0) and feasible_slots != "[]":
             day_type = "construction"
-            score = (
-                (construction_speedups * 30)
-                + (truegold * 2000)
-                + (tempered_truegold * 30000)
-            )
+            score = (construction_speedups * 30) + (truegold * 2000) + (tempered_truegold * 30000)
             raw_data = {
                 "speedups": construction_speedups,
                 "truegold": truegold,
@@ -624,9 +578,20 @@ def create_app():
             db.execute(
                 "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id, event_uid, day_type, player_name, player_id,
-                    avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
+                    submission_id,
+                    event_uid,
+                    day_type,
+                    player_name,
+                    player_id,
+                    avatar_url,
+                    backpack_url,
+                    accelerators_url,
+                    city_level,
+                    alliance_name,
+                    kingdom,
+                    score,
+                    json.dumps(raw_data),
+                    feasible_slots,
                 ),
             )
 
@@ -641,9 +606,20 @@ def create_app():
             db.execute(
                 "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id, event_uid, day_type, player_name, player_id,
-                    avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
+                    submission_id,
+                    event_uid,
+                    day_type,
+                    player_name,
+                    player_id,
+                    avatar_url,
+                    backpack_url,
+                    accelerators_url,
+                    city_level,
+                    alliance_name,
+                    kingdom,
+                    score,
+                    json.dumps(raw_data),
+                    feasible_slots,
                 ),
             )
 
@@ -659,18 +635,27 @@ def create_app():
             db.execute(
                 "INSERT INTO submissions (id, event_uid, day_type, player_name, player_id, avatar_url, backpack_url, accelerators_url, city_level, alliance_name, kingdom, resources, raw_data, feasible_slots) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    submission_id, event_uid, day_type, player_name, player_id,
-                    avatar_url, backpack_url, accelerators_url, city_level,
-                    alliance_name, kingdom, score, json.dumps(raw_data), feasible_slots,
+                    submission_id,
+                    event_uid,
+                    day_type,
+                    player_name,
+                    player_id,
+                    avatar_url,
+                    backpack_url,
+                    accelerators_url,
+                    city_level,
+                    alliance_name,
+                    kingdom,
+                    score,
+                    json.dumps(raw_data),
+                    feasible_slots,
                 ),
             )
 
         db.commit()
 
         # Redirect back to the player form with success flag so they can view the calendar
-        return redirect(
-            url_for("player_form", event_uid=event_uid, success="1", player_id=player_id)
-        )
+        return redirect(url_for("player_form", event_uid=event_uid, success="1", player_id=player_id))
 
     @app.route("/admin/<event_uid>")
     def admin_dashboard(event_uid):
@@ -678,9 +663,7 @@ def create_app():
         db.row_factory = sqlite3.Row
 
         secret = request.args.get("secret")
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
 
         if event is None:
             return "Event not found", 404
@@ -688,11 +671,7 @@ def create_app():
             return "Forbidden", 403
 
         active_days_config = json.loads(event["active_days"])
-        active_days = [
-            day
-            for day in ["construction", "training", "research"]
-            if active_days_config.get(day)
-        ]
+        active_days = [day for day in ["construction", "training", "research"] if active_days_config.get(day)]
 
         # Create a dictionary from the database row for the template
         event_dict = {
@@ -718,14 +697,10 @@ def create_app():
                 submissions_by_day[row["day_type"]].append(sub_dict)
 
         # 2. Group assignments and related data by day_type
-        assignments_raw = db.execute(
-            "SELECT * FROM assignments WHERE event_uid = ?", (event_uid,)
-        ).fetchall()
+        assignments_raw = db.execute("SELECT * FROM assignments WHERE event_uid = ?", (event_uid,)).fetchall()
         rich_assignments = {day: {} for day in active_days}
         assignments_by_sub_id = {}
-        submissions_map = {
-            (sub["day_type"], sub["player_id"]): sub for sub in submissions_raw
-        }
+        submissions_map = {(sub["day_type"], sub["player_id"]): sub for sub in submissions_raw}
 
         for a in assignments_raw:
             day_type = a["day_type"]
@@ -761,14 +736,8 @@ def create_app():
                 try:
                     feasible_slots = json.loads(sub["feasible_slots"])
                     # Create human readable labels for hover text
-                    requested_labels = [
-                        slot_labels[i] for i in feasible_slots if 0 <= i < slot_count
-                    ]
-                    sub["requested_slots_text"] = (
-                        ", ".join(requested_labels)
-                        if requested_labels
-                        else "No slots selected"
-                    )
+                    requested_labels = [slot_labels[i] for i in feasible_slots if 0 <= i < slot_count]
+                    sub["requested_slots_text"] = ", ".join(requested_labels) if requested_labels else "No slots selected"
 
                     for slot_index in feasible_slots:
                         if 0 <= slot_index < slot_count:
@@ -791,30 +760,20 @@ def create_app():
                     parts = []
                     if day == "construction":
                         if raw_resources.get("speedups"):
-                            parts.append(
-                                f"Speedups: {format_minutes(raw_resources['speedups'])}"
-                            )
+                            parts.append(f"Speedups: {format_minutes(raw_resources['speedups'])}")
                         if raw_resources.get("truegold"):
                             parts.append(f"Truegold: {int(raw_resources['truegold']):,}".replace(",", "."))
                         if raw_resources.get("tempered_truegold"):
-                            parts.append(
-                                f"Tempered Gold: {int(raw_resources['tempered_truegold']):,}".replace(",", ".")
-                            )
+                            parts.append(f"Tempered Gold: {int(raw_resources['tempered_truegold']):,}".replace(",", "."))
                     elif day == "training":
                         if raw_resources.get("speedups"):
-                            parts.append(
-                                f"Speedups: {format_minutes(raw_resources['speedups'])}"
-                            )
+                            parts.append(f"Speedups: {format_minutes(raw_resources['speedups'])}")
                     elif day == "research":
                         if raw_resources.get("speedups"):
-                            parts.append(
-                                f"Speedups: {format_minutes(raw_resources['speedups'])}"
-                            )
+                            parts.append(f"Speedups: {format_minutes(raw_resources['speedups'])}")
                         if raw_resources.get("truegold_dust"):
                             parts.append(f"Dust: {int(raw_resources['truegold_dust']):,}".replace(",", "."))
-                    sub["resources_text"] = (
-                        " | ".join(parts) if parts else "No raw data"
-                    )
+                    sub["resources_text"] = " | ".join(parts) if parts else "No raw data"
                 except (json.JSONDecodeError, TypeError):
                     sub["resources_text"] = "Error parsing resources"
 
@@ -822,9 +781,7 @@ def create_app():
 
             # Available Slots
             assigned_slots_for_day = rich_assignments[day].keys()
-            available_slots[day] = [
-                i for i in range(slot_count) if i not in assigned_slots_for_day
-            ]
+            available_slots[day] = [i for i in range(slot_count) if i not in assigned_slots_for_day]
 
             # Alliance Summary
             day_summary = {}
@@ -847,9 +804,7 @@ def create_app():
 
         # Generate URLs for the admin dashboard links
         player_url = url_for("player_form", event_uid=event_uid, _external=True)
-        finalized_url = url_for(
-            "locked_appointments", event_uid=event_uid, _external=True
-        )
+        finalized_url = url_for("locked_appointments", event_uid=event_uid, _external=True)
 
         return render_template(
             "admin_dashboard.html",
@@ -872,19 +827,13 @@ def create_app():
     def public_schedule(event_uid):
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
 
         if event is None:
             return "Event not found", 404
 
         active_days_config = json.loads(event["active_days"])
-        active_days = [
-            day
-            for day in ["construction", "training", "research"]
-            if active_days_config.get(day)
-        ]
+        active_days = [day for day in ["construction", "training", "research"] if active_days_config.get(day)]
 
         # Create a dictionary from the database row for the template
         event_dict = {
@@ -893,9 +842,7 @@ def create_app():
             "active_days": active_days_config,
         }
 
-        assignments_raw = db.execute(
-            "SELECT * FROM assignments WHERE event_uid = ?", (event_uid,)
-        ).fetchall()
+        assignments_raw = db.execute("SELECT * FROM assignments WHERE event_uid = ?", (event_uid,)).fetchall()
 
         # Group assignments by day_type
         assignments = {day: {} for day in active_days}
@@ -915,9 +862,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -927,9 +872,7 @@ def create_app():
         slot_index = request.form.get("slot_index")
 
         if not slot_index:  # Don't do anything if the slot is empty
-            return redirect(
-                url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-            )
+            return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
         try:
             slot_idx_val = int(slot_index)
@@ -953,9 +896,7 @@ def create_app():
         if not sub:
             return "Submission not found", 404
 
-        app.audit_logger.info(
-            f"ADMIN: Manual assign - Player {player_id} to slot {slot_idx_val} for day {day_type} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Manual assign - Player {player_id} to slot {slot_idx_val} for day {day_type} in event {event_uid}")
 
         # Check if there is an existing assignment in this slot that will be overridden
         existing_assignment = db.execute(
@@ -995,18 +936,14 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
             return "Forbidden", 403
 
         day_type = request.form.get("day_type")
-        app.audit_logger.info(
-            f"ADMIN: Automatic distribution triggered for event {event_uid}, day {day_type or 'all'}"
-        )
+        app.audit_logger.info(f"ADMIN: Automatic distribution triggered for event {event_uid}, day {day_type or 'all'}")
         logic.run_distribution_algorithm(event_uid, day_type)
 
         return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
@@ -1016,9 +953,7 @@ def create_app():
         secret = request.args.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1057,9 +992,7 @@ def create_app():
         return Response(
             output.getvalue(),
             mimetype="text/csv",
-            headers={
-                "Content-Disposition": f"attachment; filename=schedule_{event['uid']}_{day_type}.csv"
-            },
+            headers={"Content-Disposition": f"attachment; filename=schedule_{event['uid']}_{day_type}.csv"},
         )
 
     @app.route("/admin/<event_uid>/export_submissions", methods=["GET"])
@@ -1067,9 +1000,7 @@ def create_app():
         secret = request.args.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1105,9 +1036,7 @@ def create_app():
 
         import datetime
 
-        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
-            "%Y%m%d_%H%M%S"
-        )
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"submissions_{event_uid}_{timestamp}.json"
 
         return Response(
@@ -1121,9 +1050,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1132,26 +1059,20 @@ def create_app():
         file = request.files.get("submissions_file")
         if not file or file.filename == "":
             flash("No file selected.", "error")
-            return redirect(
-                url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-            )
+            return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
         try:
             data = json.load(file)
         except Exception:
             flash("Invalid file format. Please upload a valid JSON file.", "error")
-            return redirect(
-                url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-            )
+            return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
         if not isinstance(data, list):
             flash(
                 "Invalid JSON schema. Submissions must be formatted as an array.",
                 "error",
             )
-            return redirect(
-                url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-            )
+            return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
         required_fields = [
             "day_type",
@@ -1164,27 +1085,21 @@ def create_app():
         for idx, item in enumerate(data):
             if not isinstance(item, dict):
                 flash(f"Item at index {idx} is not a valid submission object.", "error")
-                return redirect(
-                    url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                )
+                return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             for field in required_fields:
                 if field not in item:
                     flash(
                         f"Missing required field '{field}' at submission index {idx}.",
                         "error",
                     )
-                    return redirect(
-                        url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                    )
+                    return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
             # Validate resources can be parsed to float, convert and save as float
             try:
                 item["resources"] = float(item["resources"])
             except (ValueError, TypeError):
                 flash("Must be a number.", "error")
-                return redirect(
-                    url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                )
+                return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
             # Validate and normalize feasible_slots to JSON string of list of integers
             fs_val = item["feasible_slots"]
@@ -1193,21 +1108,15 @@ def create_app():
                     fs_val = json.loads(fs_val)
                 except Exception:
                     flash("feasible_slots must be a list.", "error")
-                    return redirect(
-                        url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                    )
+                    return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             if not isinstance(fs_val, list):
                 flash("feasible_slots must be a list.", "error")
-                return redirect(
-                    url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                )
+                return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             try:
                 fs_val = [int(x) for x in fs_val]
             except (ValueError, TypeError):
                 flash("feasible_slots must be a list of integers.", "error")
-                return redirect(
-                    url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                )
+                return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             item["feasible_slots"] = json.dumps(fs_val)
 
             # Validate and normalize raw_data to JSON string of a dictionary/object
@@ -1217,14 +1126,10 @@ def create_app():
                     rd_val = json.loads(rd_val)
                 except Exception:
                     flash("raw_data must be a JSON object.", "error")
-                    return redirect(
-                        url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                    )
+                    return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             if not isinstance(rd_val, dict):
                 flash("raw_data must be a JSON object.", "error")
-                return redirect(
-                    url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                )
+                return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
             item["raw_data"] = json.dumps(rd_val)
 
         # Process upserts inside transaction
@@ -1245,16 +1150,8 @@ def create_app():
         for item in data:
             sub_id = f"{event_uid}_{item['player_id']}_{item['day_type']}"
             # Ensure values are safely parsed (re-encode json strings if they were parsed as dicts/lists)
-            raw_data_str = (
-                item["raw_data"]
-                if isinstance(item["raw_data"], str)
-                else json.dumps(item["raw_data"])
-            )
-            feasible_slots_str = (
-                item["feasible_slots"]
-                if isinstance(item["feasible_slots"], str)
-                else json.dumps(item["feasible_slots"])
-            )
+            raw_data_str = item["raw_data"] if isinstance(item["raw_data"], str) else json.dumps(item["raw_data"])
+            feasible_slots_str = item["feasible_slots"] if isinstance(item["feasible_slots"], str) else json.dumps(item["feasible_slots"])
 
             db.execute(
                 """
@@ -1281,9 +1178,7 @@ def create_app():
             )
 
         db.commit()
-        app.audit_logger.info(
-            f"ADMIN: Imported {len(data)} submissions for {len(unique_players)} players in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Imported {len(data)} submissions for {len(unique_players)} players in event {event_uid}")
         flash(
             f"Successfully imported {len(data)} submissions for {len(unique_players)} players.",
             "success",
@@ -1296,9 +1191,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1318,9 +1211,7 @@ def create_app():
             (event_uid, day_type, slot_index),
         )
 
-        app.audit_logger.info(
-            f"ADMIN: Lock - Slot {slot_index} for day {day_type} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Lock - Slot {slot_index} for day {day_type} in event {event_uid}")
 
         if assignment:
             db.execute(
@@ -1337,9 +1228,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1359,9 +1248,7 @@ def create_app():
             (event_uid, day_type, slot_index),
         )
 
-        app.audit_logger.info(
-            f"ADMIN: Unlock - Slot {slot_index} for day {day_type} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Unlock - Slot {slot_index} for day {day_type} in event {event_uid}")
 
         if assignment:
             db.execute(
@@ -1378,9 +1265,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1388,9 +1273,7 @@ def create_app():
 
         submission_id = request.form.get("submission_id")
 
-        app.audit_logger.info(
-            f"ADMIN: Delete submission {submission_id} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Delete submission {submission_id} in event {event_uid}")
 
         # Find player_id and day_type from submission_id
         _, player_id, day_type = submission_id.split("_", 2)
@@ -1413,9 +1296,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1424,9 +1305,7 @@ def create_app():
         submission_id = request.form.get("submission_id")
         new_alliance_name = request.form.get("alliance_name").strip()
 
-        app.audit_logger.info(
-            f"ADMIN: Update alliance for submission {submission_id} to {new_alliance_name} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Update alliance for submission {submission_id} to {new_alliance_name} in event {event_uid}")
 
         db.execute(
             "UPDATE submissions SET alliance_name = ? WHERE id = ? AND event_uid = ?",
@@ -1441,9 +1320,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1465,9 +1342,7 @@ def create_app():
                 speedups = int(request.form.get("speedups") or 0)
                 truegold = int(request.form.get("truegold") or 0)
                 tempered_truegold = int(request.form.get("tempered_truegold") or 0)
-                score = (
-                    (speedups * 30) + (truegold * 2000) + (tempered_truegold * 30000)
-                )
+                score = (speedups * 30) + (truegold * 2000) + (tempered_truegold * 30000)
                 raw_data = {
                     "speedups": speedups,
                     "truegold": truegold,
@@ -1504,9 +1379,7 @@ def create_app():
         secret = request.form.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1515,9 +1388,7 @@ def create_app():
         submission_id = request.form.get("submission_id")
         _, player_id, day_type = submission_id.split("_", 2)
 
-        app.audit_logger.info(
-            f"ADMIN: Unset assignment for Player {player_id} on day {day_type} in event {event_uid}"
-        )
+        app.audit_logger.info(f"ADMIN: Unset assignment for Player {player_id} on day {day_type} in event {event_uid}")
 
         # Delete the assignment for this player on this day
         db.execute(
@@ -1540,9 +1411,7 @@ def create_app():
         secret = request.args.get("secret")
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        event = db.execute(
-            "SELECT * FROM events WHERE uid = ?", (event_uid,)
-        ).fetchone()
+        event = db.execute("SELECT * FROM events WHERE uid = ?", (event_uid,)).fetchone()
         if event is None:
             return "Event not found", 404
         if event["admin_secret"] != secret:
@@ -1562,6 +1431,7 @@ def create_app():
     @app.route("/superadmin")
     def superadmin():
         import hmac as _hmac
+
         secret_param = request.args.get("secret", "")
         expected = app.config.get("SUPERADMIN_SECRET", "")
 
@@ -1578,6 +1448,7 @@ def create_app():
 
         from .database import get_db
         from .logic import get_superadmin_metrics
+
         time_range = request.args.get("range", "all")
         db = get_db()
         metrics = get_superadmin_metrics(db, time_range)

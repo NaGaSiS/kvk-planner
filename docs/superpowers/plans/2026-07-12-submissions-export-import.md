@@ -258,9 +258,7 @@
       with app.app_context():
           db = database.get_db()
           db.row_factory = sqlite3.Row
-          sub = db.execute(
-              "SELECT * FROM submissions WHERE player_id = 'imported_p1'"
-          ).fetchone()
+          sub = db.execute("SELECT * FROM submissions WHERE player_id = 'imported_p1'").fetchone()
           assert sub is not None
           assert sub["player_name"] == "Imported Player"
           assert sub["event_uid"] == event_uid
@@ -296,9 +294,7 @@
           return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
       if not isinstance(data, list):
-          flash(
-              "Invalid JSON schema. Submissions must be formatted as an array.", "error"
-          )
+          flash("Invalid JSON schema. Submissions must be formatted as an array.", "error")
           return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
       required_fields = [
@@ -312,18 +308,14 @@
       for idx, item in enumerate(data):
           if not isinstance(item, dict):
               flash(f"Item at index {idx} is not a valid submission object.", "error")
-              return redirect(
-                  url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-              )
+              return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
           for field in required_fields:
               if field not in item:
                   flash(
                       f"Missing required field '{field}' at submission index {idx}.",
                       "error",
                   )
-                  return redirect(
-                      url_for("admin_dashboard", event_uid=event_uid, secret=secret)
-                  )
+                  return redirect(url_for("admin_dashboard", event_uid=event_uid, secret=secret))
 
       # Process upserts inside transaction
       unique_players = list(set(item["player_id"] for item in data))
@@ -343,16 +335,8 @@
       for item in data:
           sub_id = f"{event_uid}_{item['player_id']}_{item['day_type']}"
           # Ensure values are safely parsed (re-encode json strings if they were parsed as dicts/lists)
-          raw_data_str = (
-              item["raw_data"]
-              if isinstance(item["raw_data"], str)
-              else json.dumps(item["raw_data"])
-          )
-          feasible_slots_str = (
-              item["feasible_slots"]
-              if isinstance(item["feasible_slots"], str)
-              else json.dumps(item["feasible_slots"])
-          )
+          raw_data_str = item["raw_data"] if isinstance(item["raw_data"], str) else json.dumps(item["raw_data"])
+          feasible_slots_str = item["feasible_slots"] if isinstance(item["feasible_slots"], str) else json.dumps(item["feasible_slots"])
 
           db.execute(
               """
@@ -379,9 +363,7 @@
           )
 
       db.commit()
-      app.audit_logger.info(
-          f"ADMIN: Imported {len(data)} submissions for {len(unique_players)} players in event {event_uid}"
-      )
+      app.audit_logger.info(f"ADMIN: Imported {len(data)} submissions for {len(unique_players)} players in event {event_uid}")
       flash(
           f"Successfully imported {len(data)} submissions for {len(unique_players)} players.",
           "success",

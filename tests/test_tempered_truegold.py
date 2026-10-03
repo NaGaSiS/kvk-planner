@@ -35,9 +35,7 @@ def test_tempered_truegold_submission(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT resources, raw_data FROM submissions WHERE player_id = '99999'"
-        ).fetchone()
+        sub = db.execute("SELECT resources, raw_data FROM submissions WHERE player_id = '99999'").fetchone()
         assert sub is not None
         assert sub["resources"] == 173000
 

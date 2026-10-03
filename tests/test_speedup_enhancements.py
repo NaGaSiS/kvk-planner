@@ -51,9 +51,7 @@ def test_speedup_submission_and_formatting(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT resources, raw_data FROM submissions WHERE player_id = '12345'"
-        ).fetchone()
+        sub = db.execute("SELECT resources, raw_data FROM submissions WHERE player_id = '12345'").fetchone()
         assert sub is not None
         # Score calculation for construction: speedups * 30 + truegold * 2000
         assert sub["resources"] == speedups_val * 30

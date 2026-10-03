@@ -35,9 +35,7 @@ def test_favicon(client):
 
 
 def test_create_event(client, app):
-    response = client.post(
-        "/create", data={"event_name": "Test KvK"}, follow_redirects=True
-    )
+    response = client.post("/create", data={"event_name": "Test KvK"}, follow_redirects=True)
     assert response.status_code == 200
 
     with app.app_context():
@@ -106,9 +104,7 @@ def test_submit_valid(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        row = db.execute(
-            "SELECT player_name, avatar_url FROM submissions WHERE event_uid = 'sub123' AND player_id = '123456'"
-        ).fetchone()
+        row = db.execute("SELECT player_name, avatar_url FROM submissions WHERE event_uid = 'sub123' AND player_id = '123456'").fetchone()
         assert row["player_name"] == "TestPlayer"
         assert row["avatar_url"] is None
 
@@ -328,9 +324,7 @@ def test_submit_no_slots(client, app):
     # 3. Verify NOT in DB
     with app.app_context():
         db = database.get_db()
-        count = db.execute(
-            "SELECT count(*) FROM submissions WHERE player_id = '123'"
-        ).fetchone()[0]
+        count = db.execute("SELECT count(*) FROM submissions WHERE player_id = '123'").fetchone()[0]
         assert count == 0
 
 
@@ -404,9 +398,7 @@ def test_submit_with_backpack(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT backpack_url FROM submissions WHERE player_id = '123'"
-        ).fetchone()
+        sub = db.execute("SELECT backpack_url FROM submissions WHERE player_id = '123'").fetchone()
         assert sub["backpack_url"] is not None
         assert "/static/uploads/" in sub["backpack_url"]
 
@@ -451,9 +443,7 @@ def test_submit_with_backpack_disabled(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT backpack_url FROM submissions WHERE player_id = '12345'"
-        ).fetchone()
+        sub = db.execute("SELECT backpack_url FROM submissions WHERE player_id = '12345'").fetchone()
         assert sub["backpack_url"] is None
 
 
@@ -619,9 +609,7 @@ def test_tab_specific_distribute(client, app):
     )
 
     # 2. Run distribute only for construction
-    client.post(
-        f"/admin/{uid}/distribute", data={"secret": secret, "day_type": "construction"}
-    )
+    client.post(f"/admin/{uid}/distribute", data={"secret": secret, "day_type": "construction"})
 
     # 3. Verify construction is assigned, training is not
     with app.app_context():
@@ -712,9 +700,7 @@ def test_unset_assignment(client, app):
         ).fetchone()[0]
         assert count == 0
 
-        sub = db.execute(
-            "SELECT status FROM submissions WHERE id = ?", (submission_id,)
-        ).fetchone()
+        sub = db.execute("SELECT status FROM submissions WHERE id = ?", (submission_id,)).fetchone()
         assert sub["status"] == "Pending"
 
 
@@ -749,9 +735,7 @@ def test_update_alliance(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT alliance_name FROM submissions WHERE id = ?", (submission_id,)
-        ).fetchone()
+        sub = db.execute("SELECT alliance_name FROM submissions WHERE id = ?", (submission_id,)).fetchone()
         assert sub["alliance_name"] == "New"
 
 
@@ -763,25 +747,14 @@ def test_error_routes(client, app):
     assert client.get("/admin/none?secret=any").status_code == 404
 
     # POST routes 404s
-    assert (
-        client.post("/admin/none/manual_assign", data={"secret": "any"}).status_code
-        == 404
-    )
-    assert (
-        client.post("/admin/none/distribute", data={"secret": "any"}).status_code == 404
-    )
+    assert client.post("/admin/none/manual_assign", data={"secret": "any"}).status_code == 404
+    assert client.post("/admin/none/distribute", data={"secret": "any"}).status_code == 404
     assert client.post("/admin/none/confirm", data={"secret": "any"}).status_code == 404
     assert client.post("/admin/none/unlock", data={"secret": "any"}).status_code == 404
     assert client.post("/admin/none/delete", data={"secret": "any"}).status_code == 404
-    assert (
-        client.post("/admin/none/refresh_players", data={"secret": "any"}).status_code
-        == 404
-    )
+    assert client.post("/admin/none/refresh_players", data={"secret": "any"}).status_code == 404
     assert client.post("/admin/none/unset", data={"secret": "any"}).status_code == 404
-    assert (
-        client.post("/admin/none/update_alliance", data={"secret": "any"}).status_code
-        == 404
-    )
+    assert client.post("/admin/none/update_alliance", data={"secret": "any"}).status_code == 404
     assert client.get("/admin/none/export/construction?secret=any").status_code == 404
 
     # 403s
@@ -792,36 +765,16 @@ def test_error_routes(client, app):
         secret = db.execute("SELECT admin_secret FROM events").fetchone()[0]
 
     assert client.get(f"/admin/{uid}?secret=bad").status_code == 403
-    assert (
-        client.post(f"/admin/{uid}/distribute", data={"secret": "bad"}).status_code
-        == 403
-    )
-    assert (
-        client.post(f"/admin/{uid}/manual_assign", data={"secret": "bad"}).status_code
-        == 403
-    )
-    assert (
-        client.post(f"/admin/{uid}/confirm", data={"secret": "bad"}).status_code == 403
-    )
-    assert (
-        client.post(f"/admin/{uid}/unlock", data={"secret": "bad"}).status_code == 403
-    )
-    assert (
-        client.post(f"/admin/{uid}/delete", data={"secret": "bad"}).status_code == 403
-    )
+    assert client.post(f"/admin/{uid}/distribute", data={"secret": "bad"}).status_code == 403
+    assert client.post(f"/admin/{uid}/manual_assign", data={"secret": "bad"}).status_code == 403
+    assert client.post(f"/admin/{uid}/confirm", data={"secret": "bad"}).status_code == 403
+    assert client.post(f"/admin/{uid}/unlock", data={"secret": "bad"}).status_code == 403
+    assert client.post(f"/admin/{uid}/delete", data={"secret": "bad"}).status_code == 403
     assert client.post(f"/admin/{uid}/unset", data={"secret": "bad"}).status_code == 403
-    assert (
-        client.post(f"/admin/{uid}/update_alliance", data={"secret": "bad"}).status_code
-        == 403
-    )
+    assert client.post(f"/admin/{uid}/update_alliance", data={"secret": "bad"}).status_code == 403
     assert client.get(f"/admin/{uid}/export/construction?secret=bad").status_code == 403
     assert client.get(f"/admin/{uid}/logs?secret=bad").status_code == 403
-    assert (
-        client.post(
-            f"/admin/{uid}/manual_assign", data={"secret": secret, "slot_index": ""}
-        ).status_code
-        == 302
-    )
+    assert client.post(f"/admin/{uid}/manual_assign", data={"secret": secret, "slot_index": ""}).status_code == 302
 
 
 def test_view_logs(client, app):
@@ -887,9 +840,7 @@ def test_submit_invalid_extension(client, app):
     }
 
     with patch("config.Config.ENABLE_SCREENSHOT_UPLOAD", True):
-        resp = client.post(
-            f"/event/{uid}/submit", data=data, content_type="multipart/form-data"
-        )
+        resp = client.post(f"/event/{uid}/submit", data=data, content_type="multipart/form-data")
         assert resp.status_code == 400
         assert b"Invalid file type" in resp.data
 
@@ -1065,9 +1016,7 @@ def test_override_resources(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT * FROM submissions WHERE id = ?", (training_sub_id,)
-        ).fetchone()
+        sub = db.execute("SELECT * FROM submissions WHERE id = ?", (training_sub_id,)).fetchone()
         assert sub is not None
         # Training formula: speedups * 90 = 30 * 90 = 2700
         assert sub["resources"] == 2700
@@ -1100,9 +1049,7 @@ def test_override_resources(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT * FROM submissions WHERE id = ?", (research_sub_id,)
-        ).fetchone()
+        sub = db.execute("SELECT * FROM submissions WHERE id = ?", (research_sub_id,)).fetchone()
         assert sub is not None
         # Research formula: (speedups * 30) + (truegold_dust * 1000) = 10 * 30 + 3 * 1000 = 3300
         assert sub["resources"] == 3300
@@ -1139,9 +1086,7 @@ def test_create_event_with_slot_count(client, app):
         with app.app_context():
             db = database.get_db()
             db.row_factory = sqlite3.Row
-            event = db.execute(
-                "SELECT slot_count FROM events WHERE name = ?", (f"Event {sc}",)
-            ).fetchone()
+            event = db.execute("SELECT slot_count FROM events WHERE name = ?", (f"Event {sc}",)).fetchone()
             assert event is not None
             assert event["slot_count"] == sc
 
@@ -1162,9 +1107,7 @@ def test_null_slot_count_handling(client, app):
     # Get event UID and manually set slot_count to NULL in DB
     with app.app_context():
         db = database.get_db()
-        row = db.execute(
-            "SELECT uid FROM events WHERE name = ?", ("Null Slot Count Event",)
-        ).fetchone()
+        row = db.execute("SELECT uid FROM events WHERE name = ?", ("Null Slot Count Event",)).fetchone()
         assert row is not None
         uid = row[0]
 
@@ -1544,9 +1487,7 @@ def test_import_submissions_route(client, app):
     with app.app_context():
         db = database.get_db()
         db.row_factory = sqlite3.Row
-        sub = db.execute(
-            "SELECT * FROM submissions WHERE player_id = 'imported_p1'"
-        ).fetchone()
+        sub = db.execute("SELECT * FROM submissions WHERE player_id = 'imported_p1'").fetchone()
         assert sub is not None
         assert sub["player_name"] == "Imported Player"
         assert sub["event_uid"] == event_uid

@@ -80,9 +80,7 @@ def test_create_app_creates_log_dir():
                 create_app()
 
             # Check if it tried to create a logs directory
-            made_logs = any(
-                "logs" in str(args[0]) for args, kwargs in mock_mkdir.call_args_list
-            )
+            made_logs = any("logs" in str(args[0]) for args, kwargs in mock_mkdir.call_args_list)
             assert made_logs
 
 
@@ -92,9 +90,7 @@ def test_database_migrations():
     try:
         conn = sqlite3.connect(db_path)
         # Create tables missing the new columns
-        conn.execute(
-            "CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)"
-        )
+        conn.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)")
         conn.execute(
             "CREATE TABLE submissions (id TEXT PRIMARY KEY, event_uid TEXT, day_type TEXT, player_name TEXT, player_id TEXT, alliance_name TEXT, resources REAL, raw_data TEXT, feasible_slots TEXT)"
         )
@@ -132,23 +128,15 @@ def test_database_migrations():
             assert "backpack_url" in cols
 
             # Create an event first to satisfy the FOREIGN KEY constraint now that PRAGMA foreign_keys = ON is enforced
-            db.execute(
-                "INSERT INTO events (uid, name, active_days, admin_secret) VALUES ('e1', 'Test Event', '[\"construction\"]', 'secret')"
-            )
+            db.execute("INSERT INTO events (uid, name, active_days, admin_secret) VALUES ('e1', 'Test Event', '[\"construction\"]', 'secret')")
 
             # FUNCTIONAL TEST: Try to insert same slot for different days
-            db.execute(
-                "INSERT INTO assignments (event_uid, day_type, slot_index, player_id) VALUES ('e1', 'construction', 10, 'p1')"
-            )
-            db.execute(
-                "INSERT INTO assignments (event_uid, day_type, slot_index, player_id) VALUES ('e1', 'training', 10, 'p2')"
-            )
+            db.execute("INSERT INTO assignments (event_uid, day_type, slot_index, player_id) VALUES ('e1', 'construction', 10, 'p1')")
+            db.execute("INSERT INTO assignments (event_uid, day_type, slot_index, player_id) VALUES ('e1', 'training', 10, 'p2')")
             db.commit()
 
             # Verify both exist
-            count = db.execute(
-                "SELECT COUNT(*) FROM assignments WHERE event_uid='e1' AND slot_index=10"
-            ).fetchone()[0]
+            count = db.execute("SELECT COUNT(*) FROM assignments WHERE event_uid='e1' AND slot_index=10").fetchone()[0]
             assert count == 2
 
             # Test calling it again should be fine (idempotency)
@@ -163,9 +151,7 @@ def test_database_migration_with_column_present():
     db_fd, db_path = tempfile.mkstemp()
     try:
         conn = sqlite3.connect(db_path)
-        conn.execute(
-            "CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)"
-        )
+        conn.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)")
         conn.execute(
             "CREATE TABLE submissions (id TEXT PRIMARY KEY, event_uid TEXT, day_type TEXT, player_name TEXT, player_id TEXT, alliance_name TEXT, resources REAL, raw_data TEXT, feasible_slots TEXT, avatar_url TEXT)"
         )
@@ -265,10 +251,7 @@ def test_database_init_backpack_race():
                 mock_cursor.fetchall.side_effect = fetchall_side_effect
 
                 def side_effect(sql, *args):
-                    if (
-                        "ALTER TABLE SUBMISSIONS" in sql.upper()
-                        and "BACKPACK_URL" in sql.upper()
-                    ):
+                    if "ALTER TABLE SUBMISSIONS" in sql.upper() and "BACKPACK_URL" in sql.upper():
                         raise sqlite3.OperationalError("duplicate column name")
                     return MagicMock()
 
@@ -314,10 +297,7 @@ def test_database_init_backpack_error():
                 mock_cursor.fetchall.side_effect = fetchall_side_effect
 
                 def side_effect(sql, *args):
-                    if (
-                        "ALTER TABLE SUBMISSIONS" in sql.upper()
-                        and "BACKPACK_URL" in sql.upper()
-                    ):
+                    if "ALTER TABLE SUBMISSIONS" in sql.upper() and "BACKPACK_URL" in sql.upper():
                         raise sqlite3.OperationalError("other error")
                     return MagicMock()
 
@@ -440,10 +420,7 @@ def test_database_migration_already_dropped():
                 mock_cursor.fetchone.return_value = ("exists",)
 
                 def fetchall_side_effect():
-                    if (
-                        "SUBMISSIONS"
-                        in str(mock_cursor.execute.call_args_list[-1]).upper()
-                    ):
+                    if "SUBMISSIONS" in str(mock_cursor.execute.call_args_list[-1]).upper():
                         return [
                             (0, "id", "T", 1, None, 1),
                             (1, "avatar_url", "T", 0, None, 0),
@@ -554,9 +531,7 @@ def test_database_migration_slot_count(app):
     try:
         conn = sqlite3.connect(db_path)
         # Create events table with legacy schema (missing slot_count)
-        conn.execute(
-            "CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)"
-        )
+        conn.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, uid TEXT UNIQUE, name TEXT, active_days TEXT, admin_secret TEXT)")
         conn.commit()
         conn.close()
 
@@ -588,9 +563,7 @@ def test_event_slot_count_constraint_and_defaults(app):
         )
         db.commit()
 
-        row = db.execute(
-            "SELECT slot_count FROM events WHERE uid = ?", ("event_default",)
-        ).fetchone()
+        row = db.execute("SELECT slot_count FROM events WHERE uid = ?", ("event_default",)).fetchone()
         assert row is not None
         assert row["slot_count"] == 49
 
@@ -601,9 +574,7 @@ def test_event_slot_count_constraint_and_defaults(app):
         )
         db.commit()
 
-        row = db.execute(
-            "SELECT slot_count FROM events WHERE uid = ?", ("event_48",)
-        ).fetchone()
+        row = db.execute("SELECT slot_count FROM events WHERE uid = ?", ("event_48",)).fetchone()
         assert row is not None
         assert row["slot_count"] == 48
 
@@ -614,9 +585,7 @@ def test_event_slot_count_constraint_and_defaults(app):
         )
         db.commit()
 
-        row = db.execute(
-            "SELECT slot_count FROM events WHERE uid = ?", ("event_49",)
-        ).fetchone()
+        row = db.execute("SELECT slot_count FROM events WHERE uid = ?", ("event_49",)).fetchone()
         assert row is not None
         assert row["slot_count"] == 49
 
@@ -625,9 +594,7 @@ def test_event_slot_count_constraint_and_defaults(app):
         db.execute("UPDATE events SET slot_count = ? WHERE uid = ?", (49, "event_48"))
         db.commit()
 
-        row = db.execute(
-            "SELECT slot_count FROM events WHERE uid = ?", ("event_48",)
-        ).fetchone()
+        row = db.execute("SELECT slot_count FROM events WHERE uid = ?", ("event_48",)).fetchone()
         assert row is not None
         assert row["slot_count"] == 49
 
@@ -635,8 +602,6 @@ def test_event_slot_count_constraint_and_defaults(app):
         db.execute("UPDATE events SET slot_count = ? WHERE uid = ?", (48, "event_49"))
         db.commit()
 
-        row = db.execute(
-            "SELECT slot_count FROM events WHERE uid = ?", ("event_49",)
-        ).fetchone()
+        row = db.execute("SELECT slot_count FROM events WHERE uid = ?", ("event_49",)).fetchone()
         assert row is not None
         assert row["slot_count"] == 48

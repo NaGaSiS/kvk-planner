@@ -19,9 +19,7 @@ GROQ_MODEL = "qwen/qwen3.8-27b"
 # System prompt that suppresses Qwen's <think> reasoning blocks.
 # /no_think is a Qwen3 directive; the plain-language instruction is a fallback.
 SYSTEM_PROMPT = (
-    "/no_think "
-    "You are a JSON extractor for a mobile game assistant. "
-    "Output ONLY a raw JSON object. No markdown, no explanation, no reasoning."
+    "/no_think You are a JSON extractor for a mobile game assistant. Output ONLY a raw JSON object. No markdown, no explanation, no reasoning."
 )
 
 
@@ -36,10 +34,24 @@ def _parse_time_to_minutes(time_str: str) -> int:
     total = 0
     s = time_str.lower().strip()
     for old, new in [
-        ("día(s)", "d"), ("día", "d"), ("dias", "d"), ("days", "d"), ("day", "d"),
-        ("horas", "h"), ("hora", "h"), ("hours", "h"), ("hour", "h"),
-        ("minutos", "m"), ("minuto", "m"), ("minutes", "m"), ("minute", "m"), ("min", "m"),
-        ("(s)", ""), (",", ""), (".", ""), ("(es)", ""),
+        ("día(s)", "d"),
+        ("día", "d"),
+        ("dias", "d"),
+        ("days", "d"),
+        ("day", "d"),
+        ("horas", "h"),
+        ("hora", "h"),
+        ("hours", "h"),
+        ("hour", "h"),
+        ("minutos", "m"),
+        ("minuto", "m"),
+        ("minutes", "m"),
+        ("minute", "m"),
+        ("min", "m"),
+        ("(s)", ""),
+        (",", ""),
+        (".", ""),
+        ("(es)", ""),
     ]:
         s = s.replace(old, new)
     s = s.strip()
@@ -173,7 +185,11 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
         return {
             "success": False,
             "error": "API key de Groq no configurada. Obtén una gratis en console.groq.com",
-            "general": 0, "construction": 0, "training": 0, "research": 0, "healing": 0,
+            "general": 0,
+            "construction": 0,
+            "training": 0,
+            "research": 0,
+            "healing": 0,
             "confidence": 0,
         }
 
@@ -201,12 +217,16 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
     try:
         raw = _call_groq_vision(image_bytes, prompt, api_key)
         data = _find_last_json_object(raw)
-        
+
         if "error" in data and data["error"] == "wrong_screen":
             return {
                 "success": False,
                 "error": "wrong_screen_error",
-                "general": 0, "construction": 0, "training": 0, "research": 0, "healing": 0,
+                "general": 0,
+                "construction": 0,
+                "training": 0,
+                "research": 0,
+                "healing": 0,
                 "confidence": 0,
             }
         return {
@@ -223,7 +243,11 @@ def analyze_speedups_image(image_bytes: bytes, api_key: str) -> dict:
         return {
             "success": False,
             "error": f"Error al analizar: {e}",
-            "general": 0, "construction": 0, "training": 0, "research": 0, "healing": 0,
+            "general": 0,
+            "construction": 0,
+            "training": 0,
+            "research": 0,
+            "healing": 0,
             "confidence": 0,
         }
 
@@ -237,7 +261,10 @@ def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
         return {
             "success": False,
             "error": "API key de Groq no configurada. Obtén una gratis en console.groq.com",
-            "truegold": 0, "truegold_dust": 0, "truegold_template": 0, "confidence": 0,
+            "truegold": 0,
+            "truegold_dust": 0,
+            "truegold_template": 0,
+            "confidence": 0,
         }
 
     prompt = (
@@ -268,5 +295,8 @@ def analyze_backpack_image(image_bytes: bytes, api_key: str) -> dict:
         return {
             "success": False,
             "error": f"Error al analizar: {e}",
-            "truegold": 0, "truegold_dust": 0, "truegold_template": 0, "confidence": 0,
+            "truegold": 0,
+            "truegold_dust": 0,
+            "truegold_template": 0,
+            "confidence": 0,
         }

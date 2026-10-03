@@ -13,11 +13,7 @@ logger = logging.getLogger(__name__)
 
 SEARCH_URL = "https://kingshot.com.br/search"
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/126.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://kingshot.com.br/en/",
@@ -117,9 +113,7 @@ def lookup_player(player_fid: str, kingdom: str = "") -> dict:
         result["avatar_url"] = avatar_match.group(1)
 
     if not result["avatar_url"]:
-        avatar_match2 = re.search(
-            r'src="(https://got-global-avatar\.akamaized\.net/avatar/[^"]+)"', html
-        )
+        avatar_match2 = re.search(r'src="(https://got-global-avatar\.akamaized\.net/avatar/[^"]+)"', html)
         if avatar_match2:
             result["avatar_url"] = avatar_match2.group(1)
 
@@ -148,9 +142,7 @@ def lookup_player(player_fid: str, kingdom: str = "") -> dict:
 
     # Pattern 2: badge element <span class="ks-tg-badge__text">TG1</span>
     if not result["city_level"]:
-        badge_match = re.search(
-            r'class="ks-tg-badge__text"\s*>\s*([^<]+)\s*<', html
-        )
+        badge_match = re.search(r'class="ks-tg-badge__text"\s*>\s*([^<]+)\s*<', html)
         if badge_match:
             raw_label = badge_match.group(1).strip()
             num_match = re.search(r"\d+", raw_label)
@@ -163,9 +155,7 @@ def lookup_player(player_fid: str, kingdom: str = "") -> dict:
                     result["city_label"] = f"TC {level}"
 
     # --- Alliance ---
-    alliance_match = re.search(
-        r'class="player-profile-alliance">(.*?)</p>', html, re.DOTALL
-    )
+    alliance_match = re.search(r'class="player-profile-alliance">(.*?)</p>', html, re.DOTALL)
     if alliance_match:
         result["alliance_name"] = alliance_match.group(1).strip()
 

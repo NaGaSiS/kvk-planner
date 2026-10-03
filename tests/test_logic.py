@@ -7,9 +7,7 @@ def test_algorithm_prioritization(app):
     with app.app_context():
         db = database.get_db()
         event_uid = "test-event"
-        active_days = json.dumps(
-            {"construction": True, "training": True, "research": True}
-        )
+        active_days = json.dumps({"construction": True, "training": True, "research": True})
         db.execute(
             "INSERT INTO events (uid, name, active_days, admin_secret) VALUES (?, ?, ?, ?)",
             (event_uid, "Test Event", active_days, "secret"),
@@ -52,12 +50,8 @@ def test_algorithm_prioritization(app):
         logic.run_distribution_algorithm(event_uid)
 
         # Verify Player 1 got slot 5 (their first choice) and Player 2 got slot 6 (their second choice)
-        res1 = db.execute(
-            "SELECT slot_index FROM assignments WHERE player_id = 'player1' AND day_type = 'construction'"
-        ).fetchone()
-        res2 = db.execute(
-            "SELECT slot_index FROM assignments WHERE player_id = 'player2' AND day_type = 'construction'"
-        ).fetchone()
+        res1 = db.execute("SELECT slot_index FROM assignments WHERE player_id = 'player1' AND day_type = 'construction'").fetchone()
+        res2 = db.execute("SELECT slot_index FROM assignments WHERE player_id = 'player2' AND day_type = 'construction'").fetchone()
 
         assert res1[0] == 5
         assert res2[0] == 6
@@ -99,9 +93,7 @@ def test_algorithm_lock_protection(app):
         logic.run_distribution_algorithm(event_uid)
 
         # Player 2 should be bumped to slot 6 because slot 5 is locked
-        res = db.execute(
-            "SELECT slot_index FROM assignments WHERE player_id = 'player2'"
-        ).fetchone()
+        res = db.execute("SELECT slot_index FROM assignments WHERE player_id = 'player2'").fetchone()
         assert res[0] == 6
 
 
@@ -190,9 +182,7 @@ def test_algorithm_empty_slots(app):
         logic.run_distribution_algorithm(event_uid)
 
         # Should not be in assignments
-        a = db.execute(
-            "SELECT * FROM assignments WHERE player_id = 'player1'"
-        ).fetchone()
+        a = db.execute("SELECT * FROM assignments WHERE player_id = 'player1'").fetchone()
         assert a is None
 
 
@@ -243,12 +233,8 @@ def test_algorithm_smart_spread(app):
 
         # Player A should have picked Slot 2 because Slot 1 has higher demand (2 players requested it).
         # This leaves Slot 1 for Player B.
-        resA = db.execute(
-            "SELECT slot_index FROM assignments WHERE player_id = 'playerA'"
-        ).fetchone()
-        resB = db.execute(
-            "SELECT slot_index FROM assignments WHERE player_id = 'playerB'"
-        ).fetchone()
+        resA = db.execute("SELECT slot_index FROM assignments WHERE player_id = 'playerA'").fetchone()
+        resB = db.execute("SELECT slot_index FROM assignments WHERE player_id = 'playerB'").fetchone()
 
         assert resA[0] == 2
         assert resB[0] == 1
@@ -296,9 +282,7 @@ def test_algorithm_no_double_assign(app):
         assert count == 1
 
         # The submission should be Locked (since they have a locked assignment)
-        status = db.execute(
-            "SELECT status FROM submissions WHERE id = 'sub1'"
-        ).fetchone()[0]
+        status = db.execute("SELECT status FROM submissions WHERE id = 'sub1'").fetchone()[0]
         assert status == "Locked"
 
 
@@ -321,9 +305,7 @@ def test_algorithm_bad_json(app):
         logic.run_distribution_algorithm(event_uid)
 
         # Should be waitlisted
-        status = db.execute(
-            "SELECT status FROM submissions WHERE id = 'sub1'"
-        ).fetchone()[0]
+        status = db.execute("SELECT status FROM submissions WHERE id = 'sub1'").fetchone()[0]
         assert status == "Waitlisted"
 
 

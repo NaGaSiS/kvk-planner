@@ -39,9 +39,7 @@ def init_db():
     columns = [column[1] for column in cursor.fetchall()]
     if "slot_count" not in columns:
         try:
-            cursor.execute(
-                "ALTER TABLE events ADD COLUMN slot_count INTEGER DEFAULT 49"
-            )
+            cursor.execute("ALTER TABLE events ADD COLUMN slot_count INTEGER DEFAULT 49")
         except sqlite3.OperationalError as e:
             if "duplicate column name" not in str(e):
                 raise
@@ -72,7 +70,7 @@ def init_db():
     # Table exists (just created or already there), check if columns exist
     cursor.execute("PRAGMA table_info(submissions)")
     columns = [column[1] for column in cursor.fetchall()]
-        if "kingdom" not in columns:
+    if "kingdom" not in columns:
         try:
             cursor.execute("ALTER TABLE submissions ADD COLUMN kingdom TEXT")
         except sqlite3.OperationalError:
@@ -105,7 +103,6 @@ def init_db():
         except sqlite3.OperationalError as e:
             if "duplicate column name" not in str(e):
                 raise
-
 
     # 3. Ensure 'assignments' table exists and has the correct schema
     cursor.execute("""
@@ -178,9 +175,7 @@ def init_db():
                 else:
                     raise
             elif "no such table" in str(e) and "assignments_old" in str(e):
-                print(
-                    "DEBUG: assignments_old already dropped, migration likely finished."
-                )
+                print("DEBUG: assignments_old already dropped, migration likely finished.")
             else:
                 raise
 

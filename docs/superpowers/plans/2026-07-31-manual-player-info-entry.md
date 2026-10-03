@@ -73,9 +73,7 @@ def test_submit_valid(client, app):
 
     with app.app_context():
         db = database.get_db()
-        row = db.execute(
-            "SELECT player_name, avatar_url FROM submissions WHERE event_uid = 'sub123' AND player_id = '123456'"
-        ).fetchone()
+        row = db.execute("SELECT player_name, avatar_url FROM submissions WHERE event_uid = 'sub123' AND player_id = '123456'").fetchone()
         assert row["player_name"] == "TestPlayer"
         assert row["avatar_url"] is None
 
@@ -134,25 +132,23 @@ Expected: Failures due to `/api/proxy/player` and `/admin/<event_uid>/refresh_pl
 3. Delete `@app.route("/admin/<event_uid>/refresh_players")` route function.
 4. Update `@app.route("/event/<event_uid>/submit")`:
 ```python
-    @app.route("/event/<event_uid>/submit", methods=["POST"])
-    def submit(event_uid):
-        db = database.get_db()
-        player_id = request.form.get("player_id", "").strip()
-        player_name = request.form.get("player_name", "").strip()
-        alliance_name = request.form.get("alliance_name", "").strip()
+@app.route("/event/<event_uid>/submit", methods=["POST"])
+def submit(event_uid):
+    db = database.get_db()
+    player_id = request.form.get("player_id", "").strip()
+    player_name = request.form.get("player_name", "").strip()
+    alliance_name = request.form.get("alliance_name", "").strip()
 
-        # Server-side validation
-        if not player_id.isdigit():
-            return "Invalid Player ID: Must be numeric", 400
+    # Server-side validation
+    if not player_id.isdigit():
+        return "Invalid Player ID: Must be numeric", 400
 
-        if not player_name:
-            return "Invalid Player Name: Cannot be empty", 400
+    if not player_name:
+        return "Invalid Player Name: Cannot be empty", 400
 
-        app.audit_logger.info(
-            f"SUBMISSION: Player {player_name} ({player_id}) submitted resources for event {event_uid}"
-        )
-        ...
-        avatar_url = request.form.get("avatar_url") or None
+    app.audit_logger.info(f"SUBMISSION: Player {player_name} ({player_id}) submitted resources for event {event_uid}")
+    ...
+    avatar_url = request.form.get("avatar_url") or None
 ```
 
 - [ ] **Step 4: Run pytest and ruff check to verify tests pass**
